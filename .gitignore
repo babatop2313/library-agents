@@ -1,0 +1,26 @@
+# Secrets : tous les fichiers .env, sauf le modèle
+.env*
+!.env.example
+
+# Certificats et clés
+*.pem
+*.key
+*.p12
+*.jks
+
+# Maven
+backend/target/
+!backend/.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# Claude Code : réglages personnels non partagés
+.claude/settings.local.json
+
+# Divers
+.DS_Store
+*.log
