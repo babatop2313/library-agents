@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: library
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/library}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # le schéma est géré uniquement par Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+  mvc:
+    problemdetails:
+      enabled: true               # erreurs au format RFC 9457
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:pour_le_test_on_fait_ce_qu_on_ose_pas_faire_en_vrai}       # au moins 32 caractères, jamais commité
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: 8080
