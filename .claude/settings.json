@@ -18,10 +18,18 @@
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
-      "Read(./**/secrets/**)"
+      "Read(./**/secrets/**)",
+      "Edit(./.claude/factory.json)"
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh" }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -40,6 +48,7 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-architecture.sh" },
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-check.sh", "timeout": 120 }
         ]
       }
