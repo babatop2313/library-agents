@@ -3,7 +3,7 @@
 # Claude Code envoie le contexte en JSON sur stdin ; exit 2 = blocage, stderr est renvoyé à Claude.
 set -euo pipefail
 
-cmd=$(jq -r '.tool_input.command // ""')
+cmd=$(jq -r '.tool_input.command // ""' | tr -d '\r')
 
 block() {
   echo "Commande bloquée par la factory : $1" >&2
@@ -23,6 +23,11 @@ case "$cmd" in
     fi ;;
   *"DROP DATABASE"*|*"drop database"*)
     block "suppression de base de données." ;;
+  *"factory.json"*)
+    # Verrou d'architecture : aucune écriture, copie, déplacement ou suppression par le shell.
+    if echo "$cmd" | grep -Eq '(>|(^|[;&| ])(rm|mv|cp|tee|sed -i|perl -i|truncate|git checkout|git restore)[[:space:]]|Set-Content|Out-File|Remove-Item|Move-Item|Copy-Item)'; then
+      block ".claude/factory.json est verrouillé : l'architecture du projet ne peut pas être modifiée par Claude."
+    fi ;;
 esac
 
 exit 0

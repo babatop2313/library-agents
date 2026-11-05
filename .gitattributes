@@ -1,1 +1,3 @@
-*.sh text eol=lf
+# Les scripts et règles des hooks doivent garder des fins de ligne Unix (LF), même sous Windows
+*.sh    text eol=lf
+*.conf  text eol=lf
