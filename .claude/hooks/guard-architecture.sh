@@ -3,21 +3,21 @@
 # Moteur générique : les règles viennent de .claude/skills/architecture/references/<architecture>/rules.conf.
 # exit 2 = le message (stderr) est renvoyé à Claude, qui corrige dans la foulée.
 set -uo pipefail
+source "$(dirname "$0")/lib.sh"
 
-file=$(jq -r '.tool_input.file_path // ""' | tr -d '\r')
-file="${file//\\//}"                       # chemins Windows → séparateurs /
-root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-root="${root//\\//}"
+file=$(norm_path "$(jq -r '.tool_input.file_path // ""')")
+root=$(project_root)
 
 [[ "$file" == *.java ]] || exit 0
 [[ "$file" == */src/main/java/* ]] || exit 0
 [ -f "$file" ] || exit 0
 
-arch=$(jq -r '.architecture // empty' "$root/.claude/factory.json" 2>/dev/null | tr -d '\r')
+arch=$(active_architecture)
 rules="$root/.claude/skills/architecture/references/$arch/rules.conf"
 [ -n "$arch" ] && [ -f "$rules" ] || exit 0
 
 rel="${file#*/src/main/java/}"             # chemin à partir du package racine
+shown="${file#"$root"/}"                   # chemin affiché, relatif au projet si possible
 violations=""
 
 while IFS= read -r line || [ -n "$line" ]; do
@@ -35,7 +35,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 done < "$rules"
 
 if [ -n "$violations" ]; then
-  echo "Violation de l'architecture « $arch » dans ${file#$root/} :" >&2
+  echo "Violation de l'architecture « $arch » dans $shown :" >&2
   printf '%s' "$violations" >&2
   echo "Corrige le code pour respecter .claude/skills/architecture/references/$arch/REFERENCE.md." >&2
   exit 2

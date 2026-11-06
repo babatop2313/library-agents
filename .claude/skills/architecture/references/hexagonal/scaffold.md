@@ -20,3 +20,5 @@ Exécuté par `/init-architecture <boundedContext>`. Ne crée aucune classe mét
    ```
 4. Crée `<boundedContext>/domain/exception/DomainException.java` : classe abstraite qui étend `RuntimeException`,
    avec un champ `code` (String) métier. Aucun import en dehors du JDK.
+5. Ne crée **pas** `<boundedContext>/api` ni `adapter/in/module` : ils ne sont créés que lorsqu'un autre module
+   doit appeler celui-ci (voir « Communication entre modules » dans la référence).

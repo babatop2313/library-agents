@@ -7,7 +7,11 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 @AnalyzeClasses(packages = "__BASE_PACKAGE__", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
@@ -37,4 +41,19 @@ class ArchitectureTest {
         .should().dependOnClassesThat().resideInAnyPackage(
             "..adapter.in..", "..application.usecase..", "..application.port.in..")
         .because("un adapter sortant ne déclenche pas de use case");
+
+    @ArchTest
+    static final ArchRule modules_talk_only_through_their_api = slices().matching("__BASE_PACKAGE__.(*)..")
+        .should().notDependOnEachOther()
+        .ignoreDependency(alwaysTrue(), resideInAnyPackage(
+            "__BASE_PACKAGE__.*.api..", "__BASE_PACKAGE__.shared..", "__BASE_PACKAGE__.config.."))
+        .ignoreDependency(resideInAPackage("__BASE_PACKAGE__.config.."), alwaysTrue())
+        .because("un module n'utilise un autre module que par son contrat public <module>.api");
+
+    @ArchTest
+    static final ArchRule module_api_is_self_contained = noClasses().that().resideInAPackage("__BASE_PACKAGE__.*.api..")
+        .should().dependOnClassesThat().resideInAnyPackage(
+            "..domain..", "..application..", "..adapter..", "..config..",
+            "org.springframework..", "jakarta..", "lombok..")
+        .because("le contrat public d'un module n'expose que des types simples (JDK et records du package api)");
 }
