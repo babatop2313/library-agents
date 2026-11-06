@@ -26,15 +26,6 @@
   starters de test `-webmvc-test`, `-data-jpa-test`, `-security-test` ; `@MockitoBean` (plus de `@MockBean`) ;
   Jackson 3 (`tools.jackson`).
 
-## Architecture backend
-- **L'architecture est choisie une seule fois, au démarrage du projet, dans `.claude/factory.json`** (champ `architecture`).
-  Elle ne change jamais en cours de développement.
-- Les règles complètes sont dans `.claude/skills/architecture/references/<architecture>/REFERENCE.md`.
-  Leur résumé est injecté au début de chaque session par le hook `session-start.sh`.
-- Avant **toute** tâche backend (conception, code, tests, revue, bug) : charger le skill `architecture`
-  et lire la référence active. N'utiliser aucune autre référence.
-- Ne jamais modifier `.claude/factory.json` (verrouillé par un hook et une règle de permission).
-
 ## Structure du dépôt
 ```
 backend/                                   ← code Spring Boot, organisé selon la référence d'architecture
@@ -65,18 +56,4 @@ docs/specs/                                ← une spec par fonctionnalité
 | Vérifier l'architecture | `cd backend && ./mvnw test -Dtest=ArchitectureTest` |
 | Lancer l'API | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local` (avec `DB_PASSWORD` et `JWT_SECRET` définis) |
 
-## Règles non négociables
-- Respecter la règle de dépendance de la référence d'architecture active. Une violation est toujours bloquante.
-- Jamais d'entité JPA exposée par un contrôleur : toujours des DTO.
-- Toute modification de schéma passe par une nouvelle migration Flyway ; ne jamais modifier une migration existante.
-- Pas de secret dans le code ni dans `application.yml` : variables d'environnement.
-- Toute règle métier est testée, dans la couche où la référence place la logique métier.
-- `ArchitectureTest` doit toujours passer ; on corrige le code, jamais les règles.
-- Ne jamais pousser sur `main`/`develop` ni merger : on produit une branche et une Pull Request (dépôt GitHub).
 
-## Workflow attendu
-1. Lire la spec dans `docs/specs/` (ou la faire écrire par l'agent `spec-writer`).
-2. Plan validé par l'humain avant d'écrire du code.
-3. Implémentation dans l'ordre d'implémentation de la référence d'architecture.
-4. Tests → revue par l'agent `reviewer` → corrections.
-5. Commit au format Conventional Commits : `feat(catalog): enregistrement d'un livre`.
