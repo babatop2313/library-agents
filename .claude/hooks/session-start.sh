@@ -3,9 +3,9 @@
 # Ce que ce script affiche sur la sortie standard est ajouté au contexte de Claude.
 # Il ne bloque jamais (exit 0) : en cas de problème, il affiche un avertissement.
 set -uo pipefail
+source "$(dirname "$0")/lib.sh"
 
-root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-root="${root//\\//}"                       # chemins Windows → séparateurs /
+root=$(project_root)                       # chemins Windows normalisés (C:/…)
 cfg="$root/.claude/factory.json"
 refs="$root/.claude/skills/architecture/references"
 
@@ -29,7 +29,7 @@ fi
 echo "=== CLAUDE FACTORY — architecture du projet : $arch (verrouillée dans .claude/factory.json) ==="
 echo "Avant toute tâche backend, charge le skill « architecture » et lis en entier :"
 echo "  .claude/skills/architecture/references/$arch/REFERENCE.md"
-echo "N'utilise aucune autre référence d'architecture. Ne modifie jamais .claude/factory.json."
+echo "N'utilise aucune autre référence d'architecture. Ne modifie jamais .claude/factory.json (le lire avec Read est autorisé)."
 echo
 awk '/^## Résumé[[:space:]]*$/{f=1; next} /^## /{if (f) exit} f' "$ref" | tr -d '\r'
 
@@ -39,10 +39,17 @@ search_root="$root"
 at=$(find "$search_root" \( -name node_modules -o -name .git -o -name target \) -prune -o \
           -path '*/src/test/java/*' -name ArchitectureTest.java -print 2>/dev/null | head -1)
 if [ -n "$at" ]; then
+  at=$(norm_path "$at")
   marker=$(head -1 "$at" | tr -d '\r' | sed -n 's#^// architecture: *##p')
+  if grep -q '__BASE_PACKAGE__' "$at" 2>/dev/null; then
+    echo
+    echo "⛔ ArchitectureTest INCOMPLET : ${at#"$root"/} contient encore le marqueur __BASE_PACKAGE__."
+    echo "   Les règles concernées analysent un package qui n'existe pas et passent au vert SANS RIEN VÉRIFIER."
+    echo "   Signale-le à l'humain et propose de lancer /update-architecture-test avant toute tâche backend."
+  fi
   if [ -n "$marker" ] && [ "$marker" != "$arch" ]; then
     echo
-    echo "⛔ INCOHÉRENCE : ${at#$root/} a été généré pour l'architecture « $marker »,"
+    echo "⛔ INCOHÉRENCE : ${at#"$root"/} a été généré pour l'architecture « $marker »,"
     echo "   mais .claude/factory.json indique « $arch ». L'architecture ne peut pas changer en cours de projet."
     echo "   N'écris aucun code backend et signale-le immédiatement à l'humain."
   fi

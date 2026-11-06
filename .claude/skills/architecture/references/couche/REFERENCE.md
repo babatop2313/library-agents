@@ -10,6 +10,7 @@
   jamais dans un contrôleur ni dans un repository.
 - Les services ne connaissent pas HTTP (pas de `ResponseEntity`, pas de `HttpServletRequest`).
 - Transactions sur les services.
+- Entre features : on n'appelle que le service (et les DTO) d'une autre feature.
 - Ordre d'implémentation : migration → entité → repository → DTO + mapper → service → contrôleur.
 - `ArchitectureTest` (ArchUnit) doit toujours passer.
 
@@ -46,10 +47,15 @@ controller ──► service ──► repository ──► entity
 | `entity` | JDK, JPA | toutes les autres couches, Spring Web |
 | `config` | tout | — |
 
-Une feature peut appeler le **service** d'une autre feature, jamais son repository.
+### Communication entre fonctionnalités
+Une feature peut appeler le **service** d'une autre feature (et utiliser ses **DTO** et ses **exceptions**), jamais son repository,
+son entité, son mapper ni son contrôleur. Exemple : `LoanService` appelle `BookService.reserveCopy(bookId)`,
+il n'injecte jamais `BookRepository`. Chaque feature garde ses propres tables : on stocke l'identifiant (`bookId`).
 
 ## Ordre d'implémentation
 Du stockage vers l'exposition. Compiler (`./mvnw -q compile`) après chaque étape.
+Les tests indiqués après chaque flèche (→) sont ceux que la couche doit avoir. Dans `/feature`, ils sont écrits par
+l'agent `test-writer` après l'implémentation ; en travail direct (hors `/feature`), écris-les juste après l'étape.
 1. **Migration Flyway** : `V<n+1>__<description>.sql`.
 2. **Entité JPA** (`entity/`) : mapping, contraintes, méthodes métier qui protègent ses propres invariants.
 3. **Repository** (`repository/`) : interface Spring Data, requêtes dérivées ou `@Query` → test `@DataJpaTest` + Testcontainers
@@ -223,6 +229,7 @@ Toute violation de la règle de dépendance est **BLOQUANT**.
 - Package global par couche (`com.example.app.controllers`) au lieu d'un découpage par fonctionnalité.
 - Liste non paginée, relation `EAGER`, N+1.
 - `LocalDate.now()` sans `Clock` dans un service.
+- Une feature qui utilise le repository, l'entité, le mapper ou le contrôleur d'une autre feature (au lieu de son service et de ses DTO).
 - `ArchitectureTest` absent, modifié ou rouge.
 
 ## Format de réponse finale

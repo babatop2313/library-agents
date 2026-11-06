@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # PreToolUse (Edit|Write) : protège le verrou d'architecture, les fichiers sensibles
 # et les migrations Flyway déjà écrites. exit 2 = blocage, stderr est renvoyé à Claude.
-set -euo pipefail
+set -uo pipefail
+source "$(dirname "$0")/lib.sh"
 
-input=$(cat)
-file=$(echo "$input" | jq -r '.tool_input.file_path // ""' | tr -d '\r')
-file="${file//\\//}"                       # chemins Windows → séparateurs /
-
+file=$(norm_path "$(jq -r '.tool_input.file_path // ""')")
 [ -z "$file" ] && exit 0
 
 # Verrou : l'architecture est choisie une fois, par un humain, au démarrage du projet.
@@ -18,6 +16,7 @@ fi
 
 case "$file" in
   *.env|*.env.*|*/secrets/*|*.pem|*.key|*.jks|*.p12)
+    [[ "$file" == *.env.example ]] && exit 0
     echo "Fichier sensible protégé : $file. Utilise des variables d'environnement." >&2
     exit 2 ;;
 esac

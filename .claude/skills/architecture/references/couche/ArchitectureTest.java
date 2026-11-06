@@ -7,7 +7,11 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
+import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 @AnalyzeClasses(packages = "__BASE_PACKAGE__", importOptions = ImportOption.DoNotIncludeTests.class)
@@ -41,4 +45,13 @@ class ArchitectureTest {
         .should().dependOnClassesThat().resideInAnyPackage(
             "..controller..", "..service..", "..repository..", "..dto..", "..mapper..", "org.springframework.web..")
         .because("une entité ne dépend d'aucune autre couche");
+
+    @ArchTest
+    static final ArchRule features_talk_only_through_service_and_dto = slices().matching("__BASE_PACKAGE__.(*)..")
+        .should().notDependOnEachOther()
+        .ignoreDependency(alwaysTrue(), resideInAnyPackage(
+            "__BASE_PACKAGE__.*.service..", "__BASE_PACKAGE__.*.dto..", "__BASE_PACKAGE__.*.exception..",
+            "__BASE_PACKAGE__.shared..", "__BASE_PACKAGE__.config.."))
+        .ignoreDependency(resideInAPackage("__BASE_PACKAGE__.config.."), alwaysTrue())
+        .because("une feature n'utilise une autre feature que par son service, ses DTO et ses exceptions");
 }

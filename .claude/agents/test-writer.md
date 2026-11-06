@@ -23,7 +23,7 @@ au bon niveau de l'architecture.
 2. Écris les tests de chaque couche avec le type de test et les outils indiqués par la référence.
 3. Vérifie qu'`ArchitectureTest` existe, qu'il commence par `// architecture: <architecture du projet>`, et qu'il passe.
 4. Frontend : services (HttpTestingController) et composants clés.
-5. Exécute. Un test rouge dû au code de production = signale le bug, ne modifie pas le code de production.
+5. Exécute avec `cd backend && ./mvnw clean test` (le `clean` écarte les classes compilées obsolètes). Un test rouge dû au code de production = signale le bug, ne modifie pas le code de production.
 
 ## Règles communes
 - Nommage : `methode_quandCondition_alorsResultat`.

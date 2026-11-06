@@ -10,6 +10,7 @@
 - Un contrôleur n'appelle qu'un port d'entrée (interface de use case) ; un adapter sortant implémente un port de sortie.
 - Entité JPA et objet du domaine sont deux classes distinctes, reliées par un mapper dans l'adapter.
 - Les règles métier vivent dans le domaine (agrégats, value objects, services de domaine).
+- Entre modules : un module n'appelle un autre module que par son contrat public `<module>.api`, jamais par ses classes internes.
 - Ordre d'implémentation : domaine → application → adapter sortant → adapter entrant → config.
 - `ArchitectureTest` (ArchUnit) doit toujours passer.
 
@@ -29,6 +30,8 @@ com.example.<app>.<boundedContext>/
     out/persistence/  XxxJpaEntity, repository Spring Data, mapper, XxxPersistenceAdapter
     out/<autre>/      Redis, SMS, API externes…
   config/             beans spécifiques au contexte si besoin
+  api/                contrat public du module, pour les AUTRES modules uniquement (voir « Communication entre modules »)
+  adapter/in/module/  implémentation de ce contrat : comme un contrôleur, elle n'appelle que les ports d'entrée du module
 com.example.<app>.shared/       @UseCase, types transverses (aucune logique métier)
 com.example.<app>.config/       configuration globale (sécurité, Clock…)
 ```
@@ -53,8 +56,34 @@ adapter.in.web ──► application.port.in ◄── application.usecase ─�
 
 Les adapters ne se parlent jamais directement : ils passent par un port.
 
+### Communication entre modules (bounded contexts)
+Un module ne connaît **jamais** les classes internes d'un autre module (`domain`, `application`, `adapter`).
+Il passe par le **contrat public** de l'autre module, son package `<module>.api` :
+
+```
+loan.application.usecase.BorrowBookService
+   └─► loan.application.port.out.ReserveCopyPort          (besoin de loan, nommé dans le langage de loan)
+          ▲ implémenté par
+       loan.adapter.out.catalog.CatalogReservationAdapter
+          └─► catalog.api.CatalogApi                       (contrat public de catalog)
+                 ▲ implémenté par
+              catalog.adapter.in.module.CatalogApiFacade
+                 └─► catalog.application.port.in.ReserveCopyUseCase
+```
+
+| Élément | Règle |
+|---|---|
+| `<module>.api` | Interfaces et records uniquement, en types simples (`UUID`, `String`, `int`, records du package `api`). JDK seulement : ni Spring, ni JPA, ni types du domaine du module. |
+| `<module>.adapter.in.module` | Implémente le contrat `api` en appelant les ports d'entrée du module. Traduit les types `api` ↔ Command/types du domaine. |
+| Module appelant | Appelle l'autre module depuis un **adapter sortant** (`adapter/out/<autre module>`) qui implémente un de ses propres ports de sortie. Jamais depuis le domaine ni depuis un use case. |
+| Données | Chaque module garde ses propres tables. Pas de jointure ni de clé étrangère SQL vers les tables d'un autre module : on stocke l'identifiant (`bookId`). |
+
+On ne crée le package `api` d'un module que lorsqu'un autre module en a besoin.
+
 ## Ordre d'implémentation
 De l'intérieur vers l'extérieur. Compiler (`./mvnw -q compile`) après chaque étape.
+Les tests indiqués après chaque flèche (→) sont ceux que la couche doit avoir. Dans `/feature`, ils sont écrits par
+l'agent `test-writer` après l'implémentation ; en travail direct (hors `/feature`), écris-les juste après l'étape.
 1. **Domaine** : value objects, agrégats, services de domaine, exceptions → tests unitaires purs, lancés tout de suite.
 2. **Application** : Command/Query, interfaces `port/in` et `port/out`, use cases `@UseCase` → tests avec des fakes des ports.
 3. **Adapter sortant** (`adapter/out/persistence`) : migration Flyway, `XxxJpaEntity`, repository Spring Data,
@@ -258,6 +287,56 @@ class LoanPersistenceAdapter implements LoadActiveLoansPort, SaveLoanPort {
 }
 ```
 
+### Contrat entre modules
+```java
+package com.example.library.catalog.api;
+
+/** Contrat public de catalog pour les autres modules. JDK uniquement. */
+public interface CatalogApi {
+    ReservationResult reserveCopy(UUID bookId);
+    void releaseCopy(UUID bookId);
+}
+
+public record ReservationResult(boolean reserved, String reason) {}
+```
+```java
+package com.example.library.catalog.adapter.in.module;
+
+@Component
+class CatalogApiFacade implements CatalogApi {
+    private final ReserveCopyUseCase reserveCopyUseCase;      // port d'entrée de catalog
+    private final ReleaseCopyUseCase releaseCopyUseCase;
+    // constructeur
+
+    @Override
+    public ReservationResult reserveCopy(UUID bookId) {
+        try {
+            reserveCopyUseCase.reserve(new ReserveCopyCommand(new BookId(bookId)));
+            return new ReservationResult(true, null);
+        } catch (NoCopyAvailableException e) {
+            return new ReservationResult(false, e.getCode());
+        }
+    }
+
+    @Override
+    public void releaseCopy(UUID bookId) { releaseCopyUseCase.release(new ReleaseCopyCommand(new BookId(bookId))); }
+}
+```
+```java
+package com.example.library.loan.adapter.out.catalog;
+
+@Component
+class CatalogReservationAdapter implements ReserveCopyPort {    // port de sortie de loan
+    private final CatalogApi catalogApi;
+    // constructeur
+
+    @Override
+    public boolean reserveCopy(BookId bookId) {                  // BookId de loan, pas celui de catalog
+        return catalogApi.reserveCopy(bookId.value()).reserved();
+    }
+}
+```
+
 ## Tests par couche
 | Couche | Type de test | Outils | Exemple |
 |---|---|---|---|
@@ -265,6 +344,8 @@ class LoanPersistenceAdapter implements LoadActiveLoansPort, SaveLoanPort {
 | `application` | unitaire, ports simulés | JUnit 5 + **fakes en mémoire** des ports, `Clock.fixed(...)` | refus du 4ᵉ emprunt actif |
 | `adapter.in.web` | slice web | `@WebMvcTest`, MockMvc, use case en `@MockitoBean` | 201 + Location ; 403 sans rôle ; 409 si limite |
 | `adapter.out.persistence` | intégration | `@DataJpaTest` + Testcontainers PostgreSQL | l'adapter relit ce qu'il a sauvé |
+| `adapter.in.module` | unitaire | JUnit 5 + use cases mockés | `reserveCopy` renvoie `reserved=false` si plus d'exemplaire |
+| `adapter.out.<autre module>` | unitaire | JUnit 5 + `<Module>Api` mocké | traduction des types `api` vers ceux du module |
 | architecture | règles | ArchUnit (`ArchitectureTest`) | toujours vert |
 
 - Une règle métier se teste **d'abord dans le domaine** ; le test de use case vérifie l'orchestration.
@@ -281,6 +362,10 @@ Toute violation de la règle de dépendance est **BLOQUANT**.
 - Setters publics sur un agrégat ; identifiant métier en `UUID` nu dans le domaine.
 - `LocalDate.now()` sans `Clock`.
 - Use case qui renvoie une `XxxJpaEntity` ou un DTO web.
+- Un module qui importe une classe d'un autre module hors de son package `api` (`catalog.domain…`, `catalog.application…`).
+- Un package `api` qui expose des types du domaine, des entités JPA ou des annotations Spring.
+- Un appel à un autre module depuis le domaine ou un use case, au lieu d'un adapter sortant.
+- Une clé étrangère SQL ou une jointure vers les tables d'un autre module.
 - `ArchitectureTest` absent, modifié ou rouge.
 
 ## Format de réponse finale
