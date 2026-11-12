@@ -1,0 +1,4 @@
+# Profil "mcp-local" : poste de développeur uniquement. Ouvre /mcp SANS authentification.
+# Ne jamais l'activer par défaut ni sur un serveur partagé ; incompatible avec le profil "prod".
+server:
+  address: 127.0.0.1              # l'API n'écoute qu'en local

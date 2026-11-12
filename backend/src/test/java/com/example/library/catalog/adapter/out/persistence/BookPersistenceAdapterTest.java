@@ -3,7 +3,11 @@ package com.example.library.catalog.adapter.out.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.example.library.TestcontainersConfiguration;
+import com.example.library.catalog.domain.service.AvailableBooksSelection;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
 import com.example.library.catalog.domain.model.BookId;
@@ -107,6 +111,116 @@ class BookPersistenceAdapterTest {
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(IsbnAlreadyExistsException.class);
         assertThat(repository.count()).isZero();
+    }
+
+    private void givenBook(String isbn, String title, int total, int available) {
+        adapter.save(Book.restore(BookId.newId(), Isbn.of(isbn), title, "Auteur", total, available));
+    }
+
+    private static List<String> isbns(List<Book> books) {
+        return books.stream().map(b -> b.getIsbn().value()).toList();
+    }
+
+    @Test
+    void loadByIsbn_quandLivreSauvegarde_alorsPresentAvecTousLesChamps() {
+        // Given
+        givenBook("9782070368228", "L'Étranger", 3, 2);
+        // When
+        Optional<Book> result = adapter.loadByIsbn(Isbn.of("978-2-07-036822-8"));
+        // Then
+        assertThat(result).isPresent();
+        Book book = result.get();
+        assertThat(book.getIsbn().value()).isEqualTo("9782070368228");
+        assertThat(book.getTitle()).isEqualTo("L'Étranger");
+        assertThat(book.getAuthor()).isEqualTo("Auteur");
+        assertThat(book.getTotalCopies()).isEqualTo(3);
+        assertThat(book.getAvailableCopies()).isEqualTo(2);
+    }
+
+    @Test
+    void loadByIsbn_quandIsbnInconnu_alorsAbsent() {
+        // Given
+        givenBook("9782070368228", "T", 1, 1);
+        // When / Then
+        assertThat(adapter.loadByIsbn(Isbn.of("9780000000002"))).isEmpty();
+    }
+
+    @Test
+    void loadByIsbn_quandLivreSansExemplaireDisponible_alorsQuandMemePresent() {
+        // Given
+        givenBook("9782070368228", "T", 2, 0);
+        // When / Then
+        assertThat(adapter.loadByIsbn(Isbn.of("9782070368228"))).isPresent();
+    }
+
+    @Test
+    void loadAvailableBooks_quandLivresEpuises_alorsExclus() {
+        // Given
+        givenBook("9782070368228", "Dispo", 2, 1);
+        givenBook("9782070368235", "Epuise", 2, 0);
+        // When
+        List<Book> result = adapter.loadAvailableBooks(10);
+        // Then
+        assertThat(isbns(result)).containsExactly("9782070368228");
+    }
+
+    @Test
+    void loadAvailableBooks_quandCasseMixteEtAccents_alorsOrdreIdentiqueAuDomaine() {
+        // Given
+        givenBook("9782070368228", "banane", 1, 1);
+        givenBook("9782070368235", "Abricot", 1, 1);
+        givenBook("9782070368242", "zèbre", 1, 1);
+        givenBook("9782070368259", "Éclair", 1, 1);
+        givenBook("9782070368266", "apple", 1, 1);
+        givenBook("9782070368273", "ZEBU", 1, 1);
+        givenBook("9782070368280", "Ça va", 1, 1);
+        // When
+        List<Book> result = adapter.loadAvailableBooks(20);
+        // Then : meme ordre que CATALOG_ORDER (alignement SQL / Java)
+        List<Book> expected = result.stream().sorted(AvailableBooksSelection.CATALOG_ORDER).toList();
+        assertThat(isbns(result)).hasSize(7).containsExactlyElementsOf(isbns(expected));
+    }
+
+    @Test
+    void loadAvailableBooks_quandMemeTitreCasseDifferente_alorsDepartageParIsbn() {
+        // Given
+        givenBook("9782070368242", "Roman", 1, 1);
+        givenBook("9782070368228", "ROMAN", 1, 1);
+        givenBook("9782070368235", "roman", 1, 1);
+        // When
+        List<Book> result = adapter.loadAvailableBooks(10);
+        // Then
+        assertThat(isbns(result)).containsExactly("9782070368228", "9782070368235", "9782070368242");
+    }
+
+    @Test
+    void loadAvailableBooks_quandLimiteInferieureAuNombre_alorsTronque() {
+        // Given
+        givenBook("9782070368228", "C", 1, 1);
+        givenBook("9782070368235", "A", 1, 1);
+        givenBook("9782070368242", "B", 1, 1);
+        // When
+        List<Book> result = adapter.loadAvailableBooks(2);
+        // Then
+        assertThat(result).extracting(Book::getTitle).containsExactly("A", "B");
+    }
+
+    @Test
+    void loadAvailableBooks_quandCatalogueVide_alorsListeVide() {
+        // When / Then
+        assertThat(adapter.loadAvailableBooks(10)).isEmpty();
+    }
+
+    @Test
+    void loadAvailableBooks_quandConsultation_alorsAucuneEcritureVersionInchangee() {
+        // Given
+        givenBook("9782070368228", "A", 2, 1);
+        Long before = jdbc.queryForObject("SELECT version FROM book", Long.class);
+        // When
+        adapter.loadAvailableBooks(10);
+        adapter.loadByIsbn(Isbn.of("9782070368228"));
+        // Then
+        assertThat(jdbc.queryForObject("SELECT version FROM book", Long.class)).isEqualTo(before);
     }
 
     @Test

@@ -68,6 +68,11 @@ public final class Book {
         return trimmed;
     }
 
+    /** RM-04 : un livre est empruntable s'il reste au moins un exemplaire disponible. */
+    public boolean isAvailable() {
+        return availableCopies >= 1;
+    }
+
     public BookId getId() { return id; }
     public Isbn getIsbn() { return isbn; }
     public String getTitle() { return title; }

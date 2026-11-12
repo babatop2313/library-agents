@@ -1,6 +1,11 @@
 package com.example.library.catalog.adapter.out.persistence;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.example.library.catalog.application.port.out.CheckIsbnRegisteredPort;
+import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
+import com.example.library.catalog.application.port.out.LoadBookByIsbnPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
@@ -10,7 +15,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 @Component
-class BookPersistenceAdapter implements CheckIsbnRegisteredPort, SaveBookPort {
+class BookPersistenceAdapter
+        implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort {
 
     static final String ISBN_UNIQUE_CONSTRAINT = "uk_book_isbn";
 
@@ -25,6 +31,16 @@ class BookPersistenceAdapter implements CheckIsbnRegisteredPort, SaveBookPort {
     @Override
     public boolean isRegistered(Isbn isbn) {
         return repository.existsByIsbn(isbn.value());
+    }
+
+    @Override
+    public Optional<Book> loadByIsbn(Isbn isbn) {
+        return repository.findByIsbn(isbn.value()).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Book> loadAvailableBooks(int maxResults) {
+        return repository.findAvailableOrderedByTitle(maxResults).stream().map(mapper::toDomain).toList();
     }
 
     @Override

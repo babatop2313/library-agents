@@ -186,6 +186,31 @@ class BookTest {
     }
 
     @Test
+    void isAvailable_quandZeroExemplaireDisponible_alorsFaux() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 2, 0);
+        // When / Then
+        assertThat(book.isAvailable()).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2, 1000})
+    void isAvailable_quandAuMoinsUnExemplaireDisponible_alorsVrai(int available) {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 1000, available);
+        // When / Then
+        assertThat(book.isAvailable()).isTrue();
+    }
+
+    @Test
+    void isAvailable_quandLivreNeuf_alorsVrai() {
+        // Given / When
+        Book book = Book.register(ISBN, "T", "A", 1);
+        // Then
+        assertThat(book.isAvailable()).isTrue();
+    }
+
+    @Test
     void bookId_quandNull_alorsNullPointerException() {
         assertThatThrownBy(() -> new BookId(null)).isInstanceOf(NullPointerException.class);
     }
