@@ -261,4 +261,9 @@ Spec validée par l'humain le 2026-11-12, avec les décisions suivantes (elles p
 13. **Durcissement du profil `mcp-local` (après revue)** :
     - toute requête `/mcp` dont l'en-tête `Origin` est présent et n'est pas `http://localhost` ou `http://127.0.0.1` (n'importe quel port) est rejetée en 403 ; sans en-tête `Origin`, la requête est acceptée ;
     - le démarrage est refusé si l'adresse effective du serveur (`server.address`, y compris écrasée par `SERVER_ADDRESS`) n'est pas une adresse de bouclage.
+14. **Durcissement final du profil `mcp-local` (troisième commit)** :
+    - l'en-tête `Host` des requêtes `/mcp` est aussi validé : seuls `localhost` et `127.0.0.1` (port optionnel) sont acceptés, sinon 403 ;
+    - le garde-fou d'adresse n'accepte que `127.0.0.1` et `localhost` (`::1` refusé), par cohérence avec les filtres `Origin` et `Host` ;
+    - le message WARN de démarrage cite ces deux adresses.
+    Fin du durcissement pour cette feature.
 

@@ -26,7 +26,8 @@ class LocalOriginPolicyTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "https://evil.example", "http://localhost.evil.com", "http://127.0.0.1.evil.com", "null",
-        "http://evil.com:80", "http://localhost/", "http://localhost:abc", "", "https://localhost"})
+        "http://evil.com:80", "http://localhost/", "http://localhost:abc", "", "https://localhost",
+        "http://LOCALHOST", "http://[::1]", "http://localhost:"})
     void isAllowed_quandOriginNonLocale_alorsRefusee(String origin) {
         // When / Then
         assertThat(LocalOriginPolicy.isAllowed(origin)).isFalse();

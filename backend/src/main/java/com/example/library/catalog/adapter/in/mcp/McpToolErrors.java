@@ -23,10 +23,6 @@ final class McpToolErrors {
     private McpToolErrors() {
     }
 
-    static String messageFor(DomainException error) {
-        return messageFor(null, error);
-    }
-
     /** {@code toolName} peut être nul ; il ne sert qu'au journal. */
     static String messageFor(String toolName, DomainException error) {
         return switch (error.getCode()) {

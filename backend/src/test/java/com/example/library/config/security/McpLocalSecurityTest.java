@@ -44,6 +44,11 @@ class McpLocalSecurityTest {
     private ApplicationContext context;
 
     private static MockHttpServletRequestBuilder mcpPost() {
+        // MockMvc n'envoie aucun Host par défaut : on fixe explicitement un Host local
+        return mcpPostSansHost().header("Host", "localhost");
+    }
+
+    private static MockHttpServletRequestBuilder mcpPostSansHost() {
         return post("/mcp")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
@@ -95,7 +100,52 @@ class McpLocalSecurityTest {
         new McpLocalSecurityConfig(environment);
         // Then
         assertThat(output.getAll()).contains("WARN").contains("Profil mcp-local actif")
-                .contains("SANS authentification").contains("127.0.0.1");
+                .contains("SANS authentification").contains("n'écoute que sur 127.0.0.1 ou localhost");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"evil.example", "localhost.evil.com"})
+    void mcp_quandHostNonLocalSansOrigin_alorsInterdit403(String host) throws Exception {
+        // When / Then : protection contre le DNS rebinding
+        mockMvc.perform(mcpPostSansHost().header("Host", host)).andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"evil.example", "localhost.evil.com"})
+    void mcp_quandHostNonLocalEtOriginLocale_alorsInterdit403(String host) throws Exception {
+        // When / Then
+        mockMvc.perform(mcpPostSansHost().header("Host", host).header("Origin", "http://localhost:6274"))
+                .andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"localhost:8080", "127.0.0.1:8080"})
+    void mcp_quandHostLocalAvecPort_alorsNiForbiddenNiUnauthorized(String host) throws Exception {
+        // When
+        MvcResult result = mockMvc.perform(mcpPostSansHost().header("Host", host)).andReturn();
+        // Then
+        assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @Test
+    void mcp_quandHostVide_alorsInterdit403() throws Exception {
+        // When / Then : MockMvc laisse forcer un en-tête Host vide
+        mockMvc.perform(mcpPostSansHost().header("Host", "")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void mcp_quandHostAbsent_alorsInterdit403() throws Exception {
+        // When / Then : MockMvc n'ajoute pas de Host ; un Host absent est refusé
+        mockMvc.perform(mcpPostSansHost()).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void apiBooks_quandHostNonLocalSansJwt_alorsToujoursNonAuthentifie401() throws Exception {
+        // When / Then : le filtre Host n'existe que sur la chaine /mcp
+        mockMvc.perform(post("/api/v1/books").header("Host", "evil.example")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"isbn\":\"9782070368228\",\"title\":\"T\",\"author\":\"A\",\"copies\":1}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -114,7 +164,7 @@ class McpLocalSecurityTest {
     @ValueSource(strings = {"/mcp", "/mcp/x"})
     void mcp_quandOriginMalveillante_alorsInterdit403(String path) throws Exception {
         // When / Then
-        mockMvc.perform(post(path).header("Origin", "https://evil.example")
+        mockMvc.perform(post(path).header("Host", "localhost").header("Origin", "https://evil.example")
                         .contentType(MediaType.APPLICATION_JSON).content(INITIALIZE))
                 .andExpect(status().isForbidden());
     }

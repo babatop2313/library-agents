@@ -17,7 +17,7 @@ import org.springframework.security.web.session.DisableEncodeUrlFilter;
 /**
  * Profil mcp-local (poste de développeur uniquement) : ouvre /mcp sans authentification.
  * La chaîne est limitée à /mcp ; toutes les autres routes restent protégées par {@link SecurityConfig}.
- * Les requêtes dont l'en-tête Origin n'est pas local reçoivent 403 ({@link LocalOriginFilter}).
+ * Les requêtes dont l'en-tête Host ou Origin n'est pas local reçoivent 403 ({@link LocalOriginFilter}).
  */
 @Configuration
 @Profile("mcp-local")
@@ -28,7 +28,7 @@ public class McpLocalSecurityConfig {
     public McpLocalSecurityConfig(Environment environment) {
         McpLocalProfileGuard.check(environment.getActiveProfiles(), environment.getProperty("server.address"));
         log.warn("Profil mcp-local actif : /mcp est accessible SANS authentification et l'API n'écoute que sur "
-                + "127.0.0.1. Ne jamais activer hors poste de développeur.");
+                + "127.0.0.1 ou localhost. Ne jamais activer hors poste de développeur.");
     }
 
     @Bean
@@ -36,7 +36,7 @@ public class McpLocalSecurityConfig {
     SecurityFilterChain mcpLocalSecurity(HttpSecurity http) throws Exception {
         http
             .securityMatcher("/mcp", "/mcp/**")
-            // Origin vérifié en tout premier, avant toute autre logique de la chaîne
+            // Host puis Origin vérifiés en tout premier, avant toute autre logique de la chaîne
             .addFilterBefore(new LocalOriginFilter(), DisableEncodeUrlFilter.class)
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

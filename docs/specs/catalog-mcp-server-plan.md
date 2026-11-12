@@ -18,6 +18,7 @@
 11. Les nouveaux ports de sortie sont implémentés par l'adapter de persistance existant ; réutiliser un port existant s'il charge déjà un livre par ISBN (aucun ne le fait). Pas de nouvel adapter de persistance.
 12. Plan validé tel quel.
 13. Après implémentation : messages métier en français ; erreurs de validation du protocole émises par le SDK (schéma typé conservé, pas de paramètre `Object`).
+15. Troisième commit (fin du durcissement) : validation de l'en-tête `Host` (`localhost` / `127.0.0.1`, port optionnel, sinon 403) dans la chaîne `mcp-local` ; garde-fou limité à `127.0.0.1` et `localhost` (`::1` refusé) ; WARN de démarrage aligné ; suppression de `McpLocalProfileGuard.check(String[])` et de `McpToolErrors.messageFor(DomainException)`.
 14. Après revue (second commit) : filtre `Origin` (403 si présent et non `http://localhost[:port]` / `http://127.0.0.1[:port]`) dans la chaîne `mcp-local` ; `McpLocalProfileGuard` refuse aussi une adresse serveur effective qui n'est pas de bouclage ; WARN avec le code pour une `DomainException` non prévue dans `McpToolErrors` ; tests des use cases de lecture avec port de sortie mocké ; suppression des `System.out.println` du test de bout en bout.
 
 ## 1. Architecture appliquée
