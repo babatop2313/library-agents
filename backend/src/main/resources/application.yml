@@ -21,6 +21,22 @@ spring:
   mvc:
     problemdetails:
       enabled: true               # erreurs au format RFC 9457
+  ai:
+    mcp:
+      server:                     # serveur MCP du catalogue (outils en lecture seule)
+        name: library-catalog
+        version: 0.0.1
+        type: SYNC
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        annotation-scanner:
+          enabled: true
 
 app:
   security:

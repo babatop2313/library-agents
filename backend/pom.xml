@@ -21,7 +21,21 @@
         <java.version>21</java.version>
         <!-- Version à confirmer : non gérée par le BOM Spring Boot -->
         <archunit.version>1.5.1</archunit.version>
+        <!-- Dernière 2.0.x publiée (compatible Spring Boot 4.1) ; apporte le serveur MCP -->
+        <spring-ai.version>2.0.2</spring-ai.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Web (Spring MVC) — nom de starter Spring Boot 4 -->
@@ -65,6 +79,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- Serveur MCP (Streamable HTTP) du catalogue -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         </dependency>
 
         <!-- Autorisé dans adapter/ et config/ uniquement (interdit dans domain/) -->
