@@ -257,4 +257,8 @@ Spec validée par l'humain le 2026-11-12, avec les décisions suivantes (elles p
 9. **Livre absent → erreur d'outil** (`isError = true`) avec un message clair.
 10. **`BookNotFoundException` créée dans le domaine**, sans gestion REST pour l'instant.
 11. **Persistance** : les nouveaux ports de sortie sont implémentés par l'adapter de persistance existant. Réutiliser un port de sortie existant s'il charge déjà un livre par ISBN. Pas de nouvel adapter de persistance.
+12. **Messages d'erreur (précision de la décision 8, après implémentation)** : messages métier en français ; erreurs de validation du protocole émises par le SDK. Le schéma typé des paramètres est conservé (`limit` entier, `isbn` obligatoire) : pour `limit` non entier ou `isbn` absent, le SDK MCP rejette l'appel avant le code de l'adapter, avec `isError = true`, sans stack trace, et un message du SDK (en anglais).
+13. **Durcissement du profil `mcp-local` (après revue)** :
+    - toute requête `/mcp` dont l'en-tête `Origin` est présent et n'est pas `http://localhost` ou `http://127.0.0.1` (n'importe quel port) est rejetée en 403 ; sans en-tête `Origin`, la requête est acceptée ;
+    - le démarrage est refusé si l'adresse effective du serveur (`server.address`, y compris écrasée par `SERVER_ADDRESS`) n'est pas une adresse de bouclage.
 

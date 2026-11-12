@@ -14,6 +14,7 @@ import com.example.library.catalog.application.port.in.GetBookByIsbnUseCase;
 import com.example.library.catalog.application.port.in.ListAvailableBooksQuery;
 import com.example.library.catalog.application.port.in.ListAvailableBooksUseCase;
 import com.example.library.catalog.domain.exception.BookNotFoundException;
+import com.example.library.catalog.domain.exception.DomainException;
 import com.example.library.catalog.domain.model.Book;
 import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.Isbn;
@@ -145,6 +146,34 @@ class CatalogMcpToolsTest {
         assertNoTechnicalLeak(text(result));
         assertThat(text(result)).doesNotContain("secret-host");
         assertThat(output.getAll()).contains("Erreur imprévue dans l'outil MCP get_book");
+    }
+
+    @Test
+    void getBook_quandCodeMetierNonPrevu_alorsMessageInterneEtWarnAvecCodeEtOutilSansMessage(CapturedOutput output) {
+        // Given
+        DomainException unexpected = new DomainException("CODE_IMPREVU", "detail-confidentiel-xyz") { };
+        when(getBookByIsbnUseCase.getByIsbn(any())).thenThrow(unexpected);
+        // When
+        CallToolResult result = tools.getBook(ISBN);
+        // Then
+        assertThat(result.isError()).isTrue();
+        assertThat(text(result)).isEqualTo("Erreur interne, réessayez plus tard.");
+        assertThat(output.getAll()).contains("WARN").contains("CODE_IMPREVU").contains("get_book")
+                .doesNotContain("detail-confidentiel-xyz");
+    }
+
+    @Test
+    void listAvailableBooks_quandCodeMetierNonPrevu_alorsMessageInterneEtWarnAvecCodeEtOutil(CapturedOutput output) {
+        // Given
+        DomainException unexpected = new DomainException("AUTRE_CODE", "detail-confidentiel-abc") { };
+        when(listAvailableBooksUseCase.listAvailable(any())).thenThrow(unexpected);
+        // When
+        CallToolResult result = tools.listAvailableBooks(5);
+        // Then
+        assertThat(result.isError()).isTrue();
+        assertThat(text(result)).isEqualTo("Erreur interne, réessayez plus tard.");
+        assertThat(output.getAll()).contains("WARN").contains("AUTRE_CODE").contains("list_available_books")
+                .doesNotContain("detail-confidentiel-abc");
     }
 
     // ----- list_available_books -----

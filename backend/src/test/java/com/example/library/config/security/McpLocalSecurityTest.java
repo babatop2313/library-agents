@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.library.TestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -88,6 +90,7 @@ class McpLocalSecurityTest {
         // Given
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("mcp-local");
+        environment.setProperty("server.address", "127.0.0.1");
         // When
         new McpLocalSecurityConfig(environment);
         // Then
@@ -100,9 +103,43 @@ class McpLocalSecurityTest {
         // Given
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("mcp-local", "prod");
-        // When / Then
+        environment.setProperty("server.address", "127.0.0.1");
+        // When / Then : adresse valide, donc le refus vient bien du profil prod
         assertThatThrownBy(() -> new McpLocalSecurityConfig(environment))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("prod");
+                .hasMessage("Le profil mcp-local ne peut pas être combiné avec le profil prod");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/mcp", "/mcp/x"})
+    void mcp_quandOriginMalveillante_alorsInterdit403(String path) throws Exception {
+        // When / Then
+        mockMvc.perform(post(path).header("Origin", "https://evil.example")
+                        .contentType(MediaType.APPLICATION_JSON).content(INITIALIZE))
+                .andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost.evil.com", "null", "http://127.0.0.1.evil.com"})
+    void mcp_quandOriginDeConfusion_alorsInterdit403(String origin) throws Exception {
+        // When / Then
+        mockMvc.perform(mcpPost().header("Origin", origin)).andExpect(status().isForbidden());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://localhost:6274", "http://127.0.0.1"})
+    void mcp_quandOriginLocale_alorsNiForbiddenNiUnauthorized(String origin) throws Exception {
+        // When
+        MvcResult result = mockMvc.perform(mcpPost().header("Origin", origin)).andReturn();
+        // Then
+        assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
+    }
+
+    @Test
+    void mcp_quandSansOrigin_alorsNiForbiddenNiUnauthorized() throws Exception {
+        // When
+        MvcResult result = mockMvc.perform(mcpPost()).andReturn();
+        // Then
+        assertThat(result.getResponse().getStatus()).isNotIn(401, 403);
     }
 }

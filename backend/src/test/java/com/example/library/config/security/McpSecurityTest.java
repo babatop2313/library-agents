@@ -78,6 +78,13 @@ class McpSecurityTest {
     }
 
     @Test
+    void mcp_quandOriginMalveillanteSansJwtEtSansProfil_alorsNonAuthentifie401() throws Exception {
+        // When / Then : le filtre Origin n'existe que sous mcp-local, c'est le JWT qui protège
+        mockMvc.perform(mcpPost().header("Origin", "https://evil.example"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void mcp_quandJwtIllisible_alorsNonAuthentifie401() throws Exception {
         // When / Then
         mockMvc.perform(mcpPost().header("Authorization", "Bearer pas.un.jwt"))

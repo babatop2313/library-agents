@@ -38,6 +38,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Bout en bout : client MCP Streamable HTTP reel -> /mcp (JWT) -> outils -> use cases -> PostgreSQL (Testcontainers).
  * Constat documente : pour limit = "abc" / 2.5 et isbn absent, le SDK MCP rejette l'appel par validation de schema
  * avant le code de l'application ; isError=true, sans stack trace, mais le message est celui (anglais) du SDK.
+ * Decision 12 : ces messages de validation du SDK sont conserves tels quels (seuls non vide et sans fuite technique
+ * sont verifies).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
@@ -148,7 +150,6 @@ class CatalogMcpServerIntegrationTest {
         CallToolResult result = client.callTool(new CallToolRequest("get_book", Map.of()));
         // Then
         assertThat(result.isError()).isTrue();
-        System.out.println("[CONSTAT] get_book sans isbn -> " + text(result));
         assertThat(text(result)).isNotBlank();
         assertNoStackTrace(text(result));
     }
@@ -225,7 +226,6 @@ class CatalogMcpServerIntegrationTest {
         CallToolResult result = client.callTool(new CallToolRequest("list_available_books", Map.of("limit", "abc")));
         // Then
         assertThat(result.isError()).isTrue();
-        System.out.println("[CONSTAT] list_available_books limit=\"abc\" -> " + text(result));
         assertThat(text(result)).isNotBlank();
         assertNoStackTrace(text(result));
     }
@@ -236,7 +236,6 @@ class CatalogMcpServerIntegrationTest {
         CallToolResult result = client.callTool(new CallToolRequest("list_available_books", Map.of("limit", 2.5)));
         // Then
         assertThat(result.isError()).isTrue();
-        System.out.println("[CONSTAT] list_available_books limit=2.5 -> " + text(result));
         assertThat(text(result)).isNotBlank();
         assertNoStackTrace(text(result));
     }

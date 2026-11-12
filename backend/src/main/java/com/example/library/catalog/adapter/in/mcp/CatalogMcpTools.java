@@ -67,7 +67,7 @@ public class CatalogMcpTools {
             var book = getBookByIsbnUseCase.getByIsbn(GetBookByIsbnQuery.fromRaw(isbn));
             return success(BookViewMapper.from(book));
         } catch (DomainException e) {
-            return error(McpToolErrors.messageFor(e));
+            return error(McpToolErrors.messageFor(GET_BOOK, e));
         } catch (RuntimeException e) {
             return internalError(GET_BOOK, e);
         }
@@ -85,7 +85,7 @@ public class CatalogMcpTools {
                     .toList();
             return success(views);
         } catch (DomainException e) {
-            return error(McpToolErrors.messageFor(e));
+            return error(McpToolErrors.messageFor(LIST_AVAILABLE_BOOKS, e));
         } catch (RuntimeException e) {
             return internalError(LIST_AVAILABLE_BOOKS, e);
         }
