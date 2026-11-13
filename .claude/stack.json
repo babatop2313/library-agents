@@ -1,5 +1,5 @@
 {
   "profile": "top",
-  "integrations": ["postgresql"],
+  "integrations": ["postgresql", "redis"],
   "conventions": {}
 }

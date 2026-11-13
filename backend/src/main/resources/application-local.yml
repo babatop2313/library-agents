@@ -1,0 +1,5 @@
+# Profil "local" : poste de développement uniquement (-Dspring-boot.run.profiles=local).
+spring:
+  data:
+    redis:
+      password: ""   # Redis local sans mot de passe : évite de définir REDIS_PASSWORD en local. Jamais hors poste de dev.
