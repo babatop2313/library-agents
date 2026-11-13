@@ -21,18 +21,20 @@ class ArchitectureTest {
     static final ArchRule layers_are_respected = layeredArchitecture()
         .consideringOnlyDependenciesInLayers()
         .layer("Controller").definedBy("..controller..")
+        .layer("Mcp").definedBy("..mcp..")
         .layer("Service").definedBy("..service..")
         .layer("Mapper").definedBy("..mapper..")
         .layer("Repository").definedBy("..repository..")
         .layer("Entity").definedBy("..entity..")
         .layer("Dto").definedBy("..dto..")
         .whereLayer("Controller").mayNotBeAccessedByAnyLayer()
-        .whereLayer("Service").mayOnlyBeAccessedByLayers("Controller", "Service")
+        .whereLayer("Mcp").mayNotBeAccessedByAnyLayer()
+        .whereLayer("Service").mayOnlyBeAccessedByLayers("Controller", "Mcp", "Service")
         .whereLayer("Mapper").mayOnlyBeAccessedByLayers("Service")
         .whereLayer("Repository").mayOnlyBeAccessedByLayers("Service")
         .whereLayer("Entity").mayOnlyBeAccessedByLayers("Repository", "Service", "Mapper")
-        .whereLayer("Dto").mayOnlyBeAccessedByLayers("Controller", "Service", "Mapper")
-        .because("controller → service → repository → entity, sans saut de couche");
+        .whereLayer("Dto").mayOnlyBeAccessedByLayers("Controller", "Mcp", "Service", "Mapper")
+        .because("controller (ou outil MCP) → service → repository → entity, sans saut de couche");
 
     @ArchTest
     static final ArchRule services_do_not_know_http = noClasses().that().resideInAPackage("..service..")

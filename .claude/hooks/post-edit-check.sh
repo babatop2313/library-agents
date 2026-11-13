@@ -9,6 +9,7 @@
 #  - Maven indisponible / en panne → avertissement NON bloquant (additionalContext), une fois par heure au plus
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
+need_jq skip
 
 file=$(norm_path "$(jq -r '.tool_input.file_path // ""')")
 root=$(project_root)

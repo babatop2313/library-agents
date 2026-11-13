@@ -4,6 +4,7 @@
 # Retour NON bloquant (additionalContext). Ne bloque jamais.
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
+need_jq skip
 
 cmd=$(jq -r '.tool_input.command // ""' | tr -d '\r')
 ncmd="${cmd//\\//}"

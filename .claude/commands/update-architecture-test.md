@@ -22,7 +22,7 @@ pour récupérer les nouvelles règles d'une mise à jour du kit. **Ce n'est jam
    Garde la première ligne `// architecture: <architecture>` telle quelle.
    Vérifie que `backend/src/test/resources/archunit.properties` contient `archRule.failOnEmptyShould=false`.
 6. **Contrôle** : vérifie qu'il ne reste aucun `__BASE_PACKAGE__` dans le fichier, puis lance
-   `cd backend && ./mvnw -q clean test -Dtest=ArchitectureTest` (le `clean` évite des classes compilées obsolètes).
+   `./mvnw -q clean test -Dtest=ArchitectureTest`, depuis `backend/` (le `clean` évite des classes compilées obsolètes).
 7. **Si une nouvelle règle échoue** : ne modifie ni la règle ni le code. Liste les violations, avec pour chacune la règle
    et la classe en cause, et propose un plan de correction. C'est une dette d'architecture révélée par la mise à jour :
    la décision appartient à l'humain.
