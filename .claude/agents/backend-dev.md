@@ -5,7 +5,8 @@ tools: Read, Glob, Grep, Edit, Write, Bash
 model: sonnet
 skills:
   - architecture
-  - spring-boot-conventions
+  - conventions
+  - integrations
   - rest-api-design
 ---
 
@@ -16,7 +17,11 @@ dans l'architecture imposée au projet.
 1. Lis `.claude/factory.json` : le champ `architecture` donne l'architecture du projet.
 2. Lis **en entier** `.claude/skills/architecture/references/<architecture>/REFERENCE.md`.
    N'utilise **aucune autre** référence d'architecture. Si le fichier est introuvable, arrête-toi et signale-le.
-3. Lis le plan et les fichiers existants du module concerné ; imite leur style.
+3. Applique le skill `conventions` (socle, profil et options de `.claude/stack.json`).
+   Si la tâche touche une technologie (base, cache, messagerie, mail, fichiers…), applique le skill `integrations` :
+   lis uniquement la référence de cette technologie, et place son code dans le package de son rôle (`roles.conf`).
+   Technologie absente de `stack.json` : arrête-toi et propose `/add-integration`.
+4. Lis le plan et les fichiers existants du module concerné ; imite leur style.
 
 ## Ordre d'implémentation
 Celui de la section **« Ordre d'implémentation »** de la référence, étape par étape.

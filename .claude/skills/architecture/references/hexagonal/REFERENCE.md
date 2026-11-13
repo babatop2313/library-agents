@@ -37,6 +37,25 @@ com.example.<app>.shared/       @UseCase, types transverses (aucune logique mét
 com.example.<app>.config/       configuration globale (sécurité, Clock…)
 ```
 
+
+### Rôles techniques
+Où va chaque rôle technique d'une intégration (skill `integrations`). Source machine : `roles.conf`.
+
+| Rôle | Package (dans le module) | Règle |
+|---|---|---|
+| `entrant-http` | `adapter/in/web` | appelle un port d'entrée |
+| `entrant-messagerie` | `adapter/in/messaging` | consommateur : appelle un port d'entrée, comme un contrôleur |
+| `entrant-mcp` | `adapter/in/mcp` | appelle un port d'entrée |
+| `sortant-persistance` | `adapter/out/persistence` | implémente un port de sortie |
+| `sortant-cache` | `adapter/out/cache` | implémente un port de sortie (ou décore l'adapter de persistance) |
+| `sortant-messagerie` | `adapter/out/messaging` | implémente un port de sortie de publication |
+| `sortant-fichiers` | `adapter/out/storage` | implémente un port de sortie |
+| `sortant-notification` | `adapter/out/notification` | implémente un port de sortie |
+| `sortant-http` | `adapter/out/http` | implémente un port de sortie vers l'API externe |
+
+La configuration technique d'une intégration (`@Configuration`, beans clients) va dans `<module>/config` ou dans la
+configuration globale. Le domaine et l'application n'importent **jamais** une bibliothèque d'intégration.
+
 ## Règle de dépendance
 Les dépendances pointent **toujours vers l'intérieur**.
 

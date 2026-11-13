@@ -43,6 +43,36 @@ echo "N'utilise aucune autre référence d'architecture. Ne modifie jamais .clau
 echo
 awk '/^## Résumé[[:space:]]*$/{f=1; next} /^## /{if (f) exit} f' "$ref" | tr -d '\r'
 
+# Stack du projet (.claude/stack.json) : profil de conventions, options, intégrations actives.
+stack="$root/.claude/stack.json"
+echo
+if [ -f "$stack" ]; then
+  profile=$(jq -r '.profile // "top"' "$stack" 2>/dev/null | tr -d '\r')
+  options=$(jq -r '(.conventions // {}) | to_entries | map("\(.key)=\(.value)") | join(", ")' "$stack" 2>/dev/null | tr -d '\r')
+  echo "=== Stack (.claude/stack.json, modifiable avec l'accord de l'humain) ==="
+  echo "Conventions : skill « conventions » (socle + profil « $profile »${options:+ ; options du projet : $options}). À charger avant toute tâche backend."
+  [ -f "$root/.claude/skills/conventions/references/profiles/$profile/PROFILE.md" ] \
+    || echo "⚠ Le profil « $profile » n'existe pas dans .claude/skills/conventions/references/profiles/ : signale-le."
+  integ_list=$(active_integrations)
+  if [ -n "$integ_list" ]; then
+    echo "Intégrations actives (skill « integrations » : ne lire que la référence de la techno touchée) :"
+    for integ in $integ_list; do
+      iref="$root/.claude/skills/integrations/references/$integ/REFERENCE.md"
+      if [ -f "$iref" ]; then
+        status=$(grep -m1 '^> Statut :' "$iref" | sed 's/^> Statut : //' | tr -d '\r')
+        summary=$(awk '/^## Résumé[[:space:]]*$/{f=1; next} /^## /{if (f) exit} f && NF {print; exit}' "$iref" | tr -d '\r')
+        echo "  - $integ ($status) : $summary"
+      else
+        echo "  - $integ : ⚠ aucune référence dans .claude/skills/integrations/references/ — signale-le."
+      fi
+    done
+  fi
+  echo "Une technologie absente de cette liste ne s'ajoute que par /add-integration <techno>."
+else
+  echo "ℹ .claude/stack.json est absent (projet installé avant la v3.4) : conventions = socle + profil « top »,"
+  echo "  aucune intégration déclarée. Signale à l'humain qu'il peut lancer tools/install.sh pour le créer."
+fi
+
 # Ancien format (≤ v3.2) : la version du kit était dans factory.json.
 if jq -e 'has("factoryVersion")' "$cfg" >/dev/null 2>&1; then
   echo

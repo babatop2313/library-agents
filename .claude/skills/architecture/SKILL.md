@@ -32,6 +32,7 @@ Chaque dossier `references/<nom>/` contient exactement :
 | `ArchitectureTest.java` | Modèle des règles ArchUnit, copié dans le projet par `/init-architecture` |
 | `rules.conf` | Imports interdits par couche, lus par le hook `guard-architecture.sh` |
 | `scaffold.md` | Étapes de création du squelette, exécutées par `/init-architecture` |
+| `roles.conf` | Package de chaque rôle technique (vocabulaire : `skills/integrations/roles.conf`), lu par le skill `integrations` et le hook |
 
 Sections obligatoires de `REFERENCE.md`, avec exactement ces titres :
 
@@ -47,5 +48,7 @@ Sections obligatoires de `REFERENCE.md`, avec exactement ces titres :
 | `## Grille de revue` | reviewer |
 | `## Format de réponse finale` | backend-dev, test-writer |
 
-Pour ajouter une architecture : copier `references/_template/`, remplir les 4 fichiers,
+La section `## Structure des packages` contient une sous-section `### Rôles techniques` qui cite chaque rôle de `roles.conf`.
+
+Pour ajouter une architecture : copier `references/_template/`, remplir les 5 fichiers,
 puis lancer `tools/check-references.sh` pour vérifier le contrat.

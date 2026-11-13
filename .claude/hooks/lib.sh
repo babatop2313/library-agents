@@ -43,6 +43,19 @@ active_architecture() {
   jq -r '.architecture // empty' "$(project_root)/.claude/factory.json" 2>/dev/null | tr -d '\r'
 }
 
+# Intégrations actives (.claude/stack.json), une par ligne.
+active_integrations() {
+  jq -r '(.integrations // [])[]' "$(project_root)/.claude/stack.json" 2>/dev/null | tr -d '\r'
+}
+
+# Segments de package d'un rôle technique dans l'architecture active (roles.conf), un par ligne.
+role_segments() {
+  local conf
+  conf="$(project_root)/.claude/skills/architecture/references/$(active_architecture)/roles.conf"
+  [ -f "$conf" ] || return 0
+  tr -d '\r' < "$conf" | awk -F ' :: ' -v r="$1" '$1 == r { n = split($2, a, ","); for (i = 1; i <= n; i++) { gsub(/^ +| +$/, "", a[i]); print a[i] } }'
+}
+
 # Retour NON bloquant pour Claude après un outil (PostToolUse) : le texte est ajouté à son contexte.
 post_tool_context() {
   jq -n --arg msg "$1" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $msg}}'
