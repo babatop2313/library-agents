@@ -23,7 +23,9 @@
       "mcp__github__create_pull_request",
       "mcp__github__add_issue_comment",
       "mcp__github__create_or_update_file",
-      "mcp__github__push_files"
+      "mcp__github__push_files",
+      "Edit(./.claude/stack.json)",
+      "Write(./.claude/stack.json)"
     ],
     "deny": [
       "Read(./.env)",

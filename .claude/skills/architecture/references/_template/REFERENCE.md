@@ -17,6 +17,10 @@
 ## Structure des packages
 <!-- Arborescence complète avec, pour chaque package, ce qu'il contient et un exemple de nom de classe. -->
 
+
+### Rôles techniques
+<!-- Tableau Rôle | Package | Règle, avec TOUS les rôles de skills/integrations/roles.conf ; doit concorder avec roles.conf. -->
+
 ## Règle de dépendance
 <!-- Schéma + tableau « Couche | Peut dépendre de | Ne doit jamais dépendre de ». -->
 

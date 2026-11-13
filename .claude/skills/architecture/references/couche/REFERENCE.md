@@ -31,6 +31,25 @@ com.example.<app>.config/       configuration globale (sécurité, Clock…)
 Le découpage **par fonctionnalité** (puis par couche à l'intérieur) est obligatoire : pas de package global
 `controllers/` contenant les contrôleurs de toute l'application.
 
+
+### Rôles techniques
+Où va chaque rôle technique d'une intégration (skill `integrations`). Source machine : `roles.conf`.
+
+| Rôle | Package (dans la feature) | Règle |
+|---|---|---|
+| `entrant-http` | `controller` | appelle le service |
+| `entrant-messagerie` | `listener` | consommateur : appelle le service, comme un contrôleur |
+| `entrant-mcp` | `mcp` | appelle le service |
+| `sortant-persistance` | `repository` | appelé uniquement par le service |
+| `sortant-cache` | `cache` | appelé uniquement par le service |
+| `sortant-messagerie` | `publisher` | appelé uniquement par le service |
+| `sortant-fichiers` | `storage` | appelé uniquement par le service |
+| `sortant-notification` | `notification` | appelé uniquement par le service |
+| `sortant-http` | `client` | appelé uniquement par le service |
+
+La configuration technique d'une intégration va dans `config/`. `ArchitectureTest` place `listener` au niveau des
+contrôleurs et `cache`, `publisher`, `storage`, `notification`, `client` dans une couche « Infra » accessible au seul service.
+
 ## Règle de dépendance
 ```
 controller ──► service ──► repository ──► entity

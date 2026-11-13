@@ -15,6 +15,17 @@
   Le **lire** est autorisé, de préférence avec l'outil Read. Il contient aussi `baseBranch`, la branche d'intégration
   d'où partent les branches `feature/*`. La version du kit est dans `.claude/factory-version`.
 
+## Conventions et intégrations
+- **`.claude/stack.json`** décrit la stack du projet : profil de conventions, options (mapping, Lombok, erreurs, ids)
+  et **intégrations actives** (postgresql, redis, kafka…). Contrairement à `factory.json`, il évolue au fil du projet,
+  mais **toujours avec l'accord de l'humain** (règle de permission `ask`), de préférence par `/add-integration`.
+- Avant toute tâche backend : skill `conventions` (socle, profil, options). Priorités : architecture > socle > options > profil.
+- Dès qu'une tâche touche une technologie : skill `integrations`, en ne lisant **que** la référence de cette technologie.
+  Son code va dans le package de son rôle (`roles.conf` de l'architecture) ou dans `config` ; jamais dans le domaine.
+  Le hook `guard-architecture.sh` le vérifie pour chaque intégration active.
+- Une technologie absente de `stack.json` ne s'ajoute pas « en passant » : `/add-integration <techno>` d'abord.
+- Une référence « non testée » s'applique avec prudence : vérifier artefacts et propriétés dans la documentation officielle.
+
 ## Façon de travailler
 - **Les fichiers source se créent et se modifient avec les outils Write et Edit, jamais par le shell**
   (`echo >`, `cat <<EOF`, `sed -i`, boucle `mkdir` + écriture…). Les hooks de vérification (architecture, compilation,
@@ -62,6 +73,7 @@
 | `/init-architecture <module>` | Une fois au démarrage : ArchUnit, squelette du premier module |
 | `/update-architecture-test` | Après une mise à jour du kit : recopie `ArchitectureTest` depuis la référence active |
 | `/feature <besoin>` | Point de départ vérifié → spec → plan → code → tests → revue |
+| `/add-integration <techno>` | Brancher une technologie (dépendances, configuration, Testcontainers) et la déclarer dans `stack.json` |
 | `/add-mcp-server` | Une fois, si besoin : infrastructure MCP du backend (Spring AI, profil `mcp-local` sécurisé) |
 | `/fix-bug <bug>` | Test qui reproduit → correction → revue |
 | `/review-mr [branche cible]` | Revue des changements de la branche courante |
