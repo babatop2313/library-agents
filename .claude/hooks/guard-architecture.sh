@@ -4,6 +4,7 @@
 # exit 2 = le message (stderr) est renvoyé à Claude, qui corrige dans la foulée.
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
+need_jq block
 
 file=$(norm_path "$(jq -r '.tool_input.file_path // ""')")
 root=$(project_root)

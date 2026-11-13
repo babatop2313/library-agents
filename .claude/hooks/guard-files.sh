@@ -3,6 +3,7 @@
 # et les migrations Flyway déjà écrites. exit 2 = blocage, stderr est renvoyé à Claude.
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
+need_jq block
 
 file=$(norm_path "$(jq -r '.tool_input.file_path // ""')")
 [ -z "$file" ] && exit 0

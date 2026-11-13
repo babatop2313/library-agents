@@ -12,7 +12,8 @@
 - Avant **toute** tâche backend (conception, code, tests, revue, bug) : charger le skill `architecture`
   et lire la référence active. N'utiliser aucune autre référence.
 - Ne jamais modifier `.claude/factory.json` (verrouillé par un hook et une règle de permission).
-  Le **lire** est autorisé, de préférence avec l'outil Read.
+  Le **lire** est autorisé, de préférence avec l'outil Read. Il contient aussi `baseBranch`, la branche d'intégration
+  d'où partent les branches `feature/*`. La version du kit est dans `.claude/factory-version`.
 
 ## Façon de travailler
 - **Les fichiers source se créent et se modifient avec les outils Write et Edit, jamais par le shell**
@@ -20,6 +21,10 @@
   fichiers protégés) ne surveillent que Write et Edit : un fichier écrit par le shell leur échappe.
 - Le shell sert à compiler, tester, lire l'historique Git et créer des branches ou des commits.
 - Si un hook bloque une action, ne pas chercher à le contourner : corriger, ou signaler le blocage à l'humain.
+- **Commandes portables** (le kit tourne sous Windows, macOS et Linux) : lancer Maven depuis `backend/` avec `./mvnw` ;
+  ne pas supposer un shell précis (pas de `&&` dans PowerShell 5, pas de syntaxe propre à bash 4 dans les scripts).
+- **Données de développement** (jeu d'essai pour la base locale) : dans `docs/dev/`, **jamais dans `db/migration/`**,
+  sinon Flyway les appliquerait en production. C'est l'humain qui exécute ces scripts.
 - **Après la suppression, le déplacement ou le renommage d'un fichier Java**, compiler et tester avec `./mvnw clean test`
   (ou `clean compile`) : sinon les `.class` obsolètes de `target/` faussent `ArchitectureTest`, qui analyse les classes compilées.
 
@@ -31,6 +36,17 @@
 - Toute règle métier est testée, dans la couche où la référence place la logique métier.
 - `ArchitectureTest` doit toujours passer ; on corrige le code, jamais les règles.
 - Ne jamais pousser sur `main`/`develop` ni merger : on produit une branche et une Pull Request / Merge Request.
+
+## Serveurs MCP
+- **Côté Claude Code** : serveurs optionnels décrits dans `extras/mcp/` du kit. Secrets uniquement dans des variables
+  d'environnement (`${VAR}` dans `.mcp.json`), jamais en clair. La fusion de PR/MR reste interdite, par tous les chemins.
+- **Base de données** : lecture seule. Le hook `guard-mcp-sql.sh` bloque toute requête qui n'est pas une lecture simple ;
+  ne pas chercher à le contourner.
+- **Côté application** (`/add-mcp-server`) : un outil MCP est un **adapter entrant**, placé là où la référence d'architecture
+  l'indique. Il n'appelle que ce qu'un contrôleur a le droit d'appeler, renvoie des DTO sans id technique, est en
+  **lecture seule par défaut** (une écriture exige un JWT et `@PreAuthorize`), et sa description est précise :
+  c'est ce que lit le modèle pour choisir l'outil.
+- Distinguer ce que renvoie un outil de ce qu'on en déduit : ne jamais présenter une déduction comme une donnée de l'outil.
 
 ## Workflow attendu
 1. Spec dans `docs/specs/<feature>.md` (agent `spec-writer`), validée par l'humain.
@@ -45,6 +61,7 @@
 |---|---|
 | `/init-architecture <module>` | Une fois au démarrage : ArchUnit, squelette du premier module |
 | `/update-architecture-test` | Après une mise à jour du kit : recopie `ArchitectureTest` depuis la référence active |
-| `/feature <besoin>` | Spec → plan → code → tests → revue |
+| `/feature <besoin>` | Point de départ vérifié → spec → plan → code → tests → revue |
+| `/add-mcp-server` | Une fois, si besoin : infrastructure MCP du backend (Spring AI, profil `mcp-local` sécurisé) |
 | `/fix-bug <bug>` | Test qui reproduit → correction → revue |
 | `/review-mr [branche cible]` | Revue des changements de la branche courante |

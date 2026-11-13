@@ -18,6 +18,7 @@
 ```
 com.example.<app>.<feature>/            ex. com.example.library.catalog
   controller/     contrôleurs REST (@RestController) + @RestControllerAdvice de la feature
+  mcp/            outils MCP (@McpTool) pour les assistants IA — optionnel, voir /add-mcp-server
   dto/            records request / response (BookCreateRequest, BookResponse)
   service/        logique métier et transactions (BookService)
   mapper/         conversions entité ↔ DTO (BookMapper, MapStruct ou manuel)
@@ -207,6 +208,27 @@ public class BookController {
 Un `@RestControllerAdvice` dans `controller/` traduit les exceptions métier en `ProblemDetail` :
 `XxxNotFoundException` → 404, conflit (`IsbnAlreadyUsedException`) → 409, règle métier violée → 422.
 
+### Outil MCP
+Optionnel (`/add-mcp-server`). Un outil MCP joue le même rôle qu'un contrôleur : il appelle le **service** de la feature,
+renvoie des **DTO** et ne touche jamais au repository ni aux entités. Sa description est lue par le modèle pour choisir l'outil.
+```java
+package com.example.library.catalog.mcp;
+
+@Component
+public class CatalogMcpTools {                      // public : le SDK MCP appelle la méthode par réflexion
+    private final BookService bookService;
+
+    public CatalogMcpTools(BookService bookService) { this.bookService = bookService; }
+
+    @McpTool(name = "get_book",
+             description = "Renvoie la fiche d'un livre du catalogue à partir de son ISBN-13. Erreur si le livre n'existe pas.")
+    public BookResponse getBook(@McpToolParam(description = "ISBN-13, 13 chiffres", required = true) String isbn) {
+        return bookService.getByIsbn(isbn);          // BookNotFoundException → résultat isError = true
+    }
+}
+```
+Lecture seule par défaut ; un outil d'écriture exige un JWT et `@PreAuthorize`. Erreurs : message clair, jamais de stack trace.
+
 ## Tests par couche
 | Couche | Type de test | Outils | Exemple |
 |---|---|---|---|
@@ -214,6 +236,7 @@ Un `@RestControllerAdvice` dans `controller/` traduit les exceptions métier en 
 | `service` | unitaire | JUnit 5 + Mockito (repository mocké) ou fake en mémoire, `Clock.fixed(...)` | ISBN déjà utilisé → `IsbnAlreadyUsedException` |
 | `repository` | intégration | `@DataJpaTest` + Testcontainers PostgreSQL | requête `@Query` ou dérivée non triviale |
 | `controller` | slice web | `@WebMvcTest`, MockMvc, service en `@MockitoBean` | 201 + Location ; 400 si ISBN invalide ; 403 sans rôle ; 409 si doublon |
+| `mcp` | unitaire + sécurité | JUnit 5 + service mocké ; MockMvc pour `/mcp` | message `isError` si livre absent ; `/mcp` → 401 sans JWT hors profil `mcp-local` |
 | architecture | règles | ArchUnit (`ArchitectureTest`) | toujours vert |
 
 - Une règle métier se teste **dans le service** (ou dans l'entité si elle y vit), pas dans le contrôleur.
@@ -230,6 +253,8 @@ Toute violation de la règle de dépendance est **BLOQUANT**.
 - Liste non paginée, relation `EAGER`, N+1.
 - `LocalDate.now()` sans `Clock` dans un service.
 - Une feature qui utilise le repository, l'entité, le mapper ou le contrôleur d'une autre feature (au lieu de son service et de ses DTO).
+- Outil MCP qui utilise un repository ou renvoie une entité JPA ; outil d'écriture sans JWT ni `@PreAuthorize` ;
+  description vague ou paramètre non borné.
 - `ArchitectureTest` absent, modifié ou rouge.
 
 ## Format de réponse finale

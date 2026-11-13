@@ -22,6 +22,6 @@ Premier module : $ARGUMENTS
    Crée `backend/src/test/resources/archunit.properties` contenant `archRule.failOnEmptyShould=false`
    (sinon les règles échouent tant que les packages sont vides).
 6. Exécute les étapes de `.claude/skills/architecture/references/<architecture>/scaffold.md` pour le module `$ARGUMENTS`.
-7. Lance `cd backend && ./mvnw -q test -Dtest=ArchitectureTest` : il doit passer.
+7. Lance `./mvnw -q test -Dtest=ArchitectureTest` (depuis `backend/`) : il doit passer.
 
 Ne crée aucune classe métier. Termine par : l'architecture appliquée, les fichiers créés, le résultat d'`ArchitectureTest`.

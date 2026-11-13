@@ -27,6 +27,7 @@ com.example.<app>.<boundedContext>/
     usecase/          implémentations des use cases, annotées @UseCase (BorrowBookService)
   adapter/
     in/web/           contrôleurs REST, DTO request/response, mapper web, @RestControllerAdvice
+    in/mcp/           outils MCP (@McpTool) pour les assistants IA, DTO de sortie, mapper — optionnel, voir /add-mcp-server
     out/persistence/  XxxJpaEntity, repository Spring Data, mapper, XxxPersistenceAdapter
     out/<autre>/      Redis, SMS, API externes…
   config/             beans spécifiques au contexte si besoin
@@ -265,6 +266,34 @@ record LoanResponse(UUID id) {}
 ```
 Un `@RestControllerAdvice` du même package traduit `DomainException` en `ProblemDetail` (409/422) et les « not found » en 404.
 
+### Adapter entrant (MCP)
+Optionnel (`/add-mcp-server`). Un outil MCP est un **adapter entrant comme un contrôleur** : il n'appelle que des ports
+d'entrée et ne voit jamais le domaine directement. La description de l'outil et de ses paramètres est lue par le modèle
+pour choisir l'outil : c'est un contrat, aussi précis qu'une documentation d'API.
+```java
+package com.example.library.catalog.adapter.in.mcp;
+
+@Component
+public class CatalogMcpTools {                      // public : le SDK MCP appelle la méthode par réflexion
+    private final GetBookByIsbnUseCase getBookByIsbn;
+
+    public CatalogMcpTools(GetBookByIsbnUseCase getBookByIsbn) { this.getBookByIsbn = getBookByIsbn; }
+
+    @McpTool(name = "get_book",
+             description = "Renvoie la fiche d'un livre du catalogue à partir de son ISBN-13 : titre, auteur, "
+                         + "exemplaires disponibles et total. Erreur si aucun livre ne porte cet ISBN.")
+    public BookView getBook(@McpToolParam(description = "ISBN-13, 13 chiffres (tirets et espaces acceptés)",
+                                          required = true) String isbn) {
+        return BookView.from(getBookByIsbn.get(new GetBookByIsbnQuery(isbn)));   // exception métier → isError = true
+    }
+}
+
+public record BookView(String isbn, String title, String author, int availableCopies, int totalCopies) { … }   // pas d'id technique
+```
+- **Lecture seule par défaut.** Un outil qui modifie des données exige un JWT et `@PreAuthorize`, comme un endpoint REST.
+- Les erreurs métier deviennent un résultat `isError = true` avec un message clair, jamais une stack trace.
+- Les paramètres sont typés (le schéma JSON exposé au modèle en découle) et bornés (`limit` de 1 à 20, par exemple).
+
 ### Adapter sortant (persistance)
 ```java
 @Entity @Table(name = "loan")
@@ -344,6 +373,7 @@ class CatalogReservationAdapter implements ReserveCopyPort {    // port de sorti
 | `application` | unitaire, ports simulés | JUnit 5 + **fakes en mémoire** des ports, `Clock.fixed(...)` | refus du 4ᵉ emprunt actif |
 | `adapter.in.web` | slice web | `@WebMvcTest`, MockMvc, use case en `@MockitoBean` | 201 + Location ; 403 sans rôle ; 409 si limite |
 | `adapter.out.persistence` | intégration | `@DataJpaTest` + Testcontainers PostgreSQL | l'adapter relit ce qu'il a sauvé |
+| `adapter.in.mcp` | unitaire + sécurité | JUnit 5 + use cases mockés ; MockMvc pour `/mcp` | message `isError` si livre absent ; `/mcp` → 401 sans JWT hors profil `mcp-local` |
 | `adapter.in.module` | unitaire | JUnit 5 + use cases mockés | `reserveCopy` renvoie `reserved=false` si plus d'exemplaire |
 | `adapter.out.<autre module>` | unitaire | JUnit 5 + `<Module>Api` mocké | traduction des types `api` vers ceux du module |
 | architecture | règles | ArchUnit (`ArchitectureTest`) | toujours vert |
@@ -366,6 +396,8 @@ Toute violation de la règle de dépendance est **BLOQUANT**.
 - Un package `api` qui expose des types du domaine, des entités JPA ou des annotations Spring.
 - Un appel à un autre module depuis le domaine ou un use case, au lieu d'un adapter sortant.
 - Une clé étrangère SQL ou une jointure vers les tables d'un autre module.
+- Outil MCP qui appelle un port de sortie, un use case concret ou un repository ; outil qui renvoie un objet du domaine,
+  une entité JPA ou un id technique ; outil d'écriture sans JWT ni `@PreAuthorize` ; description vague ou paramètre non borné.
 - `ArchitectureTest` absent, modifié ou rouge.
 
 ## Format de réponse finale

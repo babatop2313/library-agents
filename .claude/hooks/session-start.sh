@@ -8,6 +8,14 @@ source "$(dirname "$0")/lib.sh"
 root=$(project_root)                       # chemins Windows normalisés (C:/…)
 cfg="$root/.claude/factory.json"
 refs="$root/.claude/skills/architecture/references"
+version=$(head -1 "$root/.claude/factory-version" 2>/dev/null | tr -d '\r[:space:]')
+
+# Sans jq, aucun hook ne peut lire ce que Claude Code lui envoie : les protections bloquent tout par sécurité.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "⚠ CLAUDE FACTORY : jq est introuvable. Les hooks de protection bloqueront toutes les modifications tant qu'il manque."
+  echo "Signale-le à l'humain avant toute autre action. $(jq_install_hint)"
+  exit 0
+fi
 
 if [ ! -f "$cfg" ]; then
   echo "⚠ CLAUDE FACTORY : .claude/factory.json est absent."
@@ -26,12 +34,22 @@ if [ -z "$arch" ] || [ ! -f "$ref" ]; then
   exit 0
 fi
 
-echo "=== CLAUDE FACTORY — architecture du projet : $arch (verrouillée dans .claude/factory.json) ==="
+base=$(jq -r '.baseBranch // "develop"' "$cfg" 2>/dev/null | tr -d '\r')
+echo "=== CLAUDE FACTORY ${version:+v$version }— architecture du projet : $arch (verrouillée dans .claude/factory.json) ==="
+echo "Branche d'intégration : $base (les branches feature/* partent de $base à jour)."
 echo "Avant toute tâche backend, charge le skill « architecture » et lis en entier :"
 echo "  .claude/skills/architecture/references/$arch/REFERENCE.md"
 echo "N'utilise aucune autre référence d'architecture. Ne modifie jamais .claude/factory.json (le lire avec Read est autorisé)."
 echo
 awk '/^## Résumé[[:space:]]*$/{f=1; next} /^## /{if (f) exit} f' "$ref" | tr -d '\r'
+
+# Ancien format (≤ v3.2) : la version du kit était dans factory.json.
+if jq -e 'has("factoryVersion")' "$cfg" >/dev/null 2>&1; then
+  echo
+  echo "ℹ .claude/factory.json contient encore « factoryVersion » (format v3.2 ou antérieur). Depuis la v3.3, la version"
+  echo "  du kit est dans .claude/factory-version. Signale à l'humain qu'il peut retirer ce champ (et ajouter « baseBranch »)."
+  echo "  Ne modifie pas factory.json toi-même : il est verrouillé."
+fi
 
 # Cohérence : un ArchitectureTest généré pour une autre architecture signale un changement d'architecture en cours de projet.
 search_root="$root"

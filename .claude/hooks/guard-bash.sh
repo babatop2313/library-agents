@@ -3,6 +3,8 @@
 # Claude Code envoie le contexte en JSON sur stdin ; exit 2 = blocage, stderr est renvoyé à Claude.
 # Chaque règle est indépendante : une commande est vérifiée par toutes les règles.
 set -uo pipefail
+source "$(dirname "$0")/lib.sh"
+need_jq block
 
 cmd=$(jq -r '.tool_input.command // ""' | tr -d '\r')
 ncmd="${cmd//\\//}"                        # séparateurs Windows → / pour les comparaisons de chemins
@@ -23,6 +25,10 @@ if has 'git[[:space:]]+push'; then
   has 'git[[:space:]]+push.*([[:space:]]--force|[[:space:]]-f'"$END"'|[[:space:]]\+[A-Za-z0-9_./-]+)' \
     && block "push forcé interdit."
 fi
+
+# --- Fusion de PR/MR : toujours faite par un humain (vaut aussi pour l'outil PowerShell) ---
+has '(^|[;&|[:space:]])(gh[[:space:]]+pr[[:space:]]+merge|glab[[:space:]]+mr[[:space:]]+merge)'"$END" \
+  && block "la fusion d'une Pull Request / Merge Request est réservée à un humain."
 
 # --- Suppressions dangereuses ---
 has '(^|[;&|[:space:]])rm[[:space:]]+-[a-zA-Z]*[rR][a-zA-Z]*[[:space:]]+("|'"'"')?(/|~|\.|\*|\.\.)'"$END" \

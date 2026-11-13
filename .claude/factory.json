@@ -1,4 +1,4 @@
 {
   "architecture": "hexagonal",
-  "factoryVersion": "3.2.0"
+  "baseBranch": "develop"
 }

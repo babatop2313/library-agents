@@ -10,17 +10,29 @@
       "Bash(git log:*)",
       "Bash(git checkout -b:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git branch --show-current:*)",
+      "Bash(git rev-parse:*)"
     ],
     "ask": [
       "Bash(git push:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "mcp__github__create_issue",
+      "mcp__github__create_pull_request",
+      "mcp__github__add_issue_comment",
+      "mcp__github__create_or_update_file",
+      "mcp__github__push_files"
     ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./**/secrets/**)",
-      "Edit(./.claude/factory.json)"
+      "Edit(./.claude/factory.json)",
+      "mcp__github__merge_pull_request",
+      "Bash(gh pr merge:*)",
+      "Bash(glab mr merge:*)"
     ]
   },
   "hooks": {
@@ -29,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh\""
           }
         ]
       }
@@ -40,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-bash.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.sh\""
           }
         ]
       },
@@ -49,7 +61,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-files.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-files.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__postgres__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-mcp-sql.sh\""
           }
         ]
       }
@@ -60,11 +81,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-architecture.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-architecture.sh\""
           },
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-check.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-check.sh\"",
             "timeout": 120
           }
         ]
@@ -74,7 +95,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-bash-check.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-bash-check.sh\""
           }
         ]
       }
