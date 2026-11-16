@@ -15,6 +15,15 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  data:
+    redis:                        # cache partagé (rôle sortant-cache) ; jamais la source de vérité
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD} # secret : aucune valeur par défaut (peut être vide en local)
+      ssl:
+        enabled: ${REDIS_SSL:false}
+      timeout: 2s                 # délai maximal d'une commande
+      connect-timeout: 2s
   jackson:
     deserialization:
       accept-float-as-int: false  # "copies": 2.5 est refusé au lieu d'être tronqué
@@ -42,6 +51,9 @@ app:
   security:
     jwt:
       secret: ${JWT_SECRET:pour_le_test_on_fait_ce_qu_on_ose_pas_faire_en_vrai}       # au moins 32 caractères, jamais commité
+  cache:
+    ttl:
+      default: 10m                # TTL obligatoire sur chaque clé Redis, par type de donnée si besoin
 
 management:
   endpoints:

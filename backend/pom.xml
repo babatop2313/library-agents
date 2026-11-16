@@ -71,6 +71,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Cache Redis (client Lettuce inclus) : rôle sortant-cache, voir la référence d'intégration redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Sécurité : API protégée par JWT -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
