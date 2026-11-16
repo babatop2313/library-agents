@@ -233,6 +233,84 @@ class AvailableBooksCacheCodecTest {
         assertUnreadable("[" + validElement());
     }
 
+    private static String quoted(String value) {
+        return "\"" + value + "\"";
+    }
+
+    private static String elementWith(String title, String author, int total, int available) {
+        return element(quoted(VALID_ID), quoted(VALID_ISBN), quoted(title), quoted(author),
+                String.valueOf(total), String.valueOf(available));
+    }
+
+    @Test
+    void decode_quandTotalAuDessusDeLaBorneHaute_alorsUnreadableCacheValueExceptionExemplairesIncoherents() {
+        // Given : Book.restore ne contrôle rien, le codec doit refuser MAX_COPIES + 1
+        int total = Book.MAX_COPIES + 1;
+        String value = array(elementWith("T", "A", total, 1));
+        // When / Then
+        assertThatThrownBy(() -> codec.decode(value))
+                .isInstanceOf(UnreadableCacheValueException.class)
+                .hasMessage(AvailableBooksCacheCodec.REASON_INCONSISTENT_COPIES);
+    }
+
+    @Test
+    void decode_quandTotalEgalALaBorneHaute_alorsAccepte() {
+        // Given
+        String value = array(elementWith("T", "A", Book.MAX_COPIES, Book.MAX_COPIES));
+        // When
+        List<Book> decoded = codec.decode(value);
+        // Then
+        assertThat(decoded).singleElement().satisfies(book -> {
+            assertThat(book.getTotalCopies()).isEqualTo(Book.MAX_COPIES);
+            assertThat(book.getAvailableCopies()).isEqualTo(Book.MAX_COPIES);
+        });
+    }
+
+    @Test
+    void decode_quandTitreTropLong_alorsUnreadableCacheValueExceptionTexteTropLong() {
+        // Given
+        String value = array(elementWith("x".repeat(Book.TEXT_MAX_LENGTH + 1), "A", 3, 2));
+        // When / Then
+        assertThatThrownBy(() -> codec.decode(value))
+                .isInstanceOf(UnreadableCacheValueException.class)
+                .hasMessage(AvailableBooksCacheCodec.REASON_TEXT_TOO_LONG);
+    }
+
+    @Test
+    void decode_quandAuteurTropLong_alorsUnreadableCacheValueExceptionTexteTropLong() {
+        // Given
+        String value = array(elementWith("T", "x".repeat(Book.TEXT_MAX_LENGTH + 1), 3, 2));
+        // When / Then
+        assertThatThrownBy(() -> codec.decode(value))
+                .isInstanceOf(UnreadableCacheValueException.class)
+                .hasMessage(AvailableBooksCacheCodec.REASON_TEXT_TOO_LONG);
+    }
+
+    @Test
+    void decode_quandTitreEtAuteurALaLongueurMaximale_alorsAccepte() {
+        // Given
+        String maxText = "x".repeat(Book.TEXT_MAX_LENGTH);
+        String value = array(elementWith(maxText, maxText, 3, 2));
+        // When
+        List<Book> decoded = codec.decode(value);
+        // Then
+        assertThat(decoded).singleElement().satisfies(book -> {
+            assertThat(book.getTitle()).hasSize(Book.TEXT_MAX_LENGTH);
+            assertThat(book.getAuthor()).hasSize(Book.TEXT_MAX_LENGTH);
+        });
+    }
+
+    @Test
+    void decode_quandTitreALaLongueurMaximaleEntoureDEspaces_alorsAccepteCarSeuleLaLongueurApresStripCompte() {
+        // Given : TEXT_MAX_LENGTH caractères utiles, plus des espaces autour
+        String padded = "  " + "x".repeat(Book.TEXT_MAX_LENGTH) + "  ";
+        String value = array(elementWith(padded, "A", 3, 2));
+        // When
+        List<Book> decoded = codec.decode(value);
+        // Then
+        assertThat(decoded).hasSize(1);
+    }
+
     @Test
     void decode_quandIllisible_alorsMessageDExceptionSansLaValeur() {
         // Given : des valeurs qui contiennent un marqueur reconnaissable (RC-18)

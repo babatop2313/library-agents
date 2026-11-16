@@ -32,6 +32,14 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
     static final String KEY = "library:catalog:available-books:v1";
     static final int CACHED_SIZE = AvailableBooksLimit.MAX;
 
+    /** Gabarits des WARN (placeholders SLF4J) : jamais de valeur du cache ni de message de bibliothèque. */
+    static final String LOG_READ_FAILED = "Lecture du cache impossible, repli sur la base : key={}, cause={}";
+    static final String LOG_UNREADABLE_VALUE =
+            "Valeur du cache illisible, repli sur la base et remplacement : key={}, cause={}/{}, reason={}";
+    static final String LOG_WRITE_FAILED = "Écriture du cache impossible : key={}, cause={}";
+    static final String LOG_EVICT_FAILED =
+            "Invalidation du cache impossible, liste potentiellement périmée jusqu'à expiration : key={}, cause={}";
+
     private static final Logger log = LoggerFactory.getLogger(AvailableBooksCacheAdapter.class);
 
     /** Les trois issues de la lecture du cache (D10). */
@@ -105,8 +113,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
         try {
             value = redis.opsForValue().get(KEY);
         } catch (RuntimeException e) {
-            log.warn("Lecture du cache impossible, repli sur la base : key={}, cause={}",
-                    KEY, e.getClass().getSimpleName());
+            log.warn(LOG_READ_FAILED, KEY, e.getClass().getSimpleName());
             return new CacheRead.Unavailable();
         }
         if (value == null) {
@@ -116,8 +123,8 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
             return new CacheRead.Hit(codec.decode(value));
         } catch (UnreadableCacheValueException e) {
             String cause = e.getCause() == null ? "none" : e.getCause().getClass().getSimpleName();
-            log.warn("Valeur du cache illisible, repli sur la base et remplacement : key={}, cause={}/{}",
-                    KEY, e.getClass().getSimpleName(), cause);
+            // reason : texte fixe du codec ; jamais la valeur lue ni le message de la cause (RC-18)
+            log.warn(LOG_UNREADABLE_VALUE, KEY, e.getClass().getSimpleName(), cause, e.getMessage());
             return new CacheRead.Miss();
         }
     }
@@ -126,7 +133,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
         try {
             redis.opsForValue().set(KEY, codec.encode(books), ttl);
         } catch (RuntimeException e) {
-            log.warn("Écriture du cache impossible : key={}, cause={}", KEY, e.getClass().getSimpleName());
+            log.warn(LOG_WRITE_FAILED, KEY, e.getClass().getSimpleName());
         }
     }
 
@@ -134,8 +141,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
         try {
             redis.delete(KEY);
         } catch (RuntimeException e) {
-            log.warn("Invalidation du cache impossible, liste potentiellement périmée jusqu'à expiration : "
-                    + "key={}, cause={}", KEY, e.getClass().getSimpleName());
+            log.warn(LOG_EVICT_FAILED, KEY, e.getClass().getSimpleName());
         }
     }
 }

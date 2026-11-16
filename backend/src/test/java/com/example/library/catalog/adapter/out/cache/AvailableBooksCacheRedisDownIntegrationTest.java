@@ -76,6 +76,11 @@ class AvailableBooksCacheRedisDownIntegrationTest {
         jdbc.update("DELETE FROM book");
     }
 
+    /** Partie fixe d'un gabarit SLF4J de production, avant le premier « {} » (suit toute modification du message). */
+    private static String prefix(String template) {
+        return template.substring(0, template.indexOf("{}"));
+    }
+
     private static int count(String text, String fragment) {
         int occurrences = 0;
         for (int from = text.indexOf(fragment); from >= 0; from = text.indexOf(fragment, from + 1)) {
@@ -100,7 +105,7 @@ class AvailableBooksCacheRedisDownIntegrationTest {
         Integer inDatabase = jdbc.queryForObject("SELECT count(*) FROM book WHERE isbn = '9782070368228'",
                 Integer.class);
         assertThat(inDatabase).isEqualTo(1);
-        assertThat(count(output.getAll(), "Invalidation du cache impossible")).isEqualTo(1);
+        assertThat(count(output.getAll(), prefix(AvailableBooksCacheAdapter.LOG_EVICT_FAILED))).isEqualTo(1);
     }
 
     @Test
@@ -117,7 +122,7 @@ class AvailableBooksCacheRedisDownIntegrationTest {
         assertThat(result).extracting(book -> book.getId().value())
                 .isEqualTo(persistenceLoad.loadAvailableBooks(10).stream().map(book -> book.getId().value()).toList());
         assertThat(result).hasSize(3);
-        assertThat(count(output.getAll(), "Lecture du cache impossible")).isEqualTo(1);
-        assertThat(output.getAll()).doesNotContain("criture du cache impossible");
+        assertThat(count(output.getAll(), prefix(AvailableBooksCacheAdapter.LOG_READ_FAILED))).isEqualTo(1);
+        assertThat(output.getAll()).doesNotContain(prefix(AvailableBooksCacheAdapter.LOG_WRITE_FAILED));
     }
 }

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import com.example.library.RedisTestcontainersConfiguration;
 import com.example.library.catalog.application.fake.InMemoryBookRepository;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -54,6 +57,8 @@ import static org.awaitility.Awaitility.await;
 class AvailableBooksCacheAdapterTest {
 
     private static final Duration TTL = Duration.ofMinutes(10);
+    /** Marqueur placé dans la valeur hors bornes : il ne doit jamais apparaître dans les logs. */
+    private static final String UPPER_BOUND_MARKER = "MARQUEUR-BORNE-HAUTE";
 
     @Container
     static final GenericContainer<?> REDIS = new GenericContainer<>(
@@ -99,6 +104,11 @@ class AvailableBooksCacheAdapterTest {
 
     private static <T> T run(RedisCallback<T> callback) {
         return redis.execute(callback);
+    }
+
+    /** Partie fixe d'un gabarit SLF4J, avant le premier « {} » : toute modification du message casse les assertions. */
+    private static String prefix(String template) {
+        return template.substring(0, template.indexOf("{}"));
     }
 
     private static Book book(int index) {
@@ -196,7 +206,10 @@ class AvailableBooksCacheAdapterTest {
         String value = redis.opsForValue().get(KEY);
         // Then : RC-06, RC-08, RC-10
         assertThat(KEY).isEqualTo("library:catalog:available-books:v1");
-        assertThat(redis.keys("*")).containsExactly(KEY);
+        // clé exacte présente et seule clé de la base (DBSIZE, sans KEYS ni SCAN)
+        assertThat(redis.hasKey(KEY)).isTrue();
+        Long keyCount = run(connection -> connection.serverCommands().dbSize());
+        assertThat(keyCount).isEqualTo(1L);
         assertThat(value).isNotNull().startsWith("[").doesNotContain("@class", "com.example");
         JsonNode root = json.readTree(value);
         assertThat(root).hasSize(2);
@@ -216,7 +229,8 @@ class AvailableBooksCacheAdapterTest {
         // Then : repli sur la base, WARN sans la valeur, entrée remplacée par une valeur valide (RC-11, RC-18)
         assertThat(result).hasSize(3);
         assertThat(database.loadAvailableCalls()).isEqualTo(1);
-        assertThat(output.getAll()).contains("Valeur du cache illisible").contains(KEY)
+        assertThat(output.getAll()).contains(prefix(AvailableBooksCacheAdapter.LOG_UNREADABLE_VALUE)).contains(KEY)
+                .contains("reason=" + AvailableBooksCacheCodec.REASON_UNREADABLE_JSON)
                 .doesNotContain("MARQUEUR-SECRET");
         assertThat(new AvailableBooksCacheCodec().decode(redis.opsForValue().get(KEY))).hasSize(3);
         assertThat(redis.getExpire(KEY, TimeUnit.MILLISECONDS)).isPositive();
@@ -240,6 +254,47 @@ class AvailableBooksCacheAdapterTest {
         assertThat(database.loadAvailableCalls()).isEqualTo(1);
         assertThat(redis.opsForValue().get(KEY)).isNotEqualTo(incoherent);
         assertThat(new AvailableBooksCacheCodec().decode(redis.opsForValue().get(KEY))).hasSize(2);
+    }
+
+    private static String cachedElement(String title, String author, int total, int available) {
+        return "[{\"id\":\"6f1b2c3d-0000-4000-8000-000000000001\",\"isbn\":\"9782070368228\",\"title\":\"%s\","
+                .formatted(title) + "\"author\":\"%s\",\"totalCopies\":%d,\"availableCopies\":%d}]"
+                .formatted(author, total, available);
+    }
+
+    private static Stream<Arguments> valuesAboveDomainUpperBounds() {
+        String tooLong = "x".repeat(Book.TEXT_MAX_LENGTH + 1 - UPPER_BOUND_MARKER.length());
+        return Stream.of(
+                Arguments.of("total d'exemplaires",
+                        cachedElement(UPPER_BOUND_MARKER, "A", Book.MAX_COPIES + 1, 1),
+                        AvailableBooksCacheCodec.REASON_INCONSISTENT_COPIES),
+                Arguments.of("titre",
+                        cachedElement(UPPER_BOUND_MARKER + tooLong, "A", 3, 2),
+                        AvailableBooksCacheCodec.REASON_TEXT_TOO_LONG),
+                Arguments.of("auteur",
+                        cachedElement("T", UPPER_BOUND_MARKER + tooLong, 3, 2),
+                        AvailableBooksCacheCodec.REASON_TEXT_TOO_LONG));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("valuesAboveDomainUpperBounds")
+    void loadAvailableBooks_quandValeurAuDessusDesBornesHautesDuDomaine_alorsRepliBaseWarnSansValeurEtValeurRemplacee(
+            String field, String cachedValue, String expectedReason, CapturedOutput output) {
+        // Given : une valeur JSON bien formée mais hors bornes (Book.restore ne les contrôle pas)
+        givenBooksInDatabase(2);
+        redis.opsForValue().set(KEY, cachedValue, TTL);
+        // When
+        List<Book> result = adapter.loadAvailableBooks(10);
+        // Then : résultat de la base, une seule lecture, WARN sans la valeur, entrée remplacée avec TTL
+        assertThat(result).extracting(Book::getTitle).containsExactly("Livre 00", "Livre 01");
+        assertThat(database.loadAvailableCalls()).isEqualTo(1);
+        assertThat(output.getAll()).contains(prefix(AvailableBooksCacheAdapter.LOG_UNREADABLE_VALUE))
+                .contains("reason=" + expectedReason)
+                .doesNotContain(UPPER_BOUND_MARKER);
+        String replaced = redis.opsForValue().get(KEY);
+        assertThat(replaced).isNotEqualTo(cachedValue);
+        assertThat(new AvailableBooksCacheCodec().decode(replaced)).hasSize(2);
+        assertThat(redis.getExpire(KEY, TimeUnit.MILLISECONDS)).isPositive();
     }
 
     @Test

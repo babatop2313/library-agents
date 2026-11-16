@@ -54,10 +54,21 @@ import org.testcontainers.utility.DockerImageName;
 class AvailableBooksCacheAdapterResilienceTest {
 
     private static final Duration TTL = Duration.ofMinutes(10);
-    private static final String READ_WARN = "Lecture du cache impossible";
-    private static final String UNREADABLE_WARN = "Valeur du cache illisible";
-    private static final String WRITE_WARN = "criture du cache impossible";
-    private static final String EVICT_WARN = "Invalidation du cache impossible";
+    // Préfixes dérivés des gabarits de production (partie avant le premier « {} ») : si le message change, les
+    // assertions positives et négatives suivent. Les chaînes restent des String Java en mémoire (sortie capturée
+    // par OutputCaptureExtension) : l'encodage de la console Windows n'intervient pas pour « É » de « Écriture ».
+    private static final String READ_WARN = prefix(AvailableBooksCacheAdapter.LOG_READ_FAILED);
+    private static final String UNREADABLE_WARN = prefix(AvailableBooksCacheAdapter.LOG_UNREADABLE_VALUE);
+    private static final String WRITE_WARN = prefix(AvailableBooksCacheAdapter.LOG_WRITE_FAILED);
+    private static final String EVICT_WARN = prefix(AvailableBooksCacheAdapter.LOG_EVICT_FAILED);
+
+    /** Délai de commande de la fabrique dédiée : bien supérieur au seuil de repli pour les distinguer sans ambiguïté. */
+    private static final Duration COMMAND_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration FALLBACK_THRESHOLD = Duration.ofSeconds(1);
+
+    private static String prefix(String template) {
+        return template.substring(0, template.indexOf("{}"));
+    }
 
     private InMemoryBookRepository database;
 
@@ -107,7 +118,7 @@ class AvailableBooksCacheAdapterResilienceTest {
                 .socketOptions(SocketOptions.builder().connectTimeout(Duration.ofMillis(500)).build())
                 .build();
         LettuceClientConfiguration configuration = LettuceClientConfiguration.builder()
-                .commandTimeout(Duration.ofMillis(500))
+                .commandTimeout(COMMAND_TIMEOUT)
                 .clientOptions(options)
                 .build();
         LettuceConnectionFactory factory = new LettuceConnectionFactory(
@@ -190,14 +201,19 @@ class AvailableBooksCacheAdapterResilienceTest {
                 adapter.loadAvailableBooks(10); // établit la connexion et remplit le cache
                 container.stop();
                 // When : on attend que Lettuce ait détecté la coupure, puis on mesure un appel
-                await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofMillis(200))
+                await().atMost(Duration.ofSeconds(30)).pollInterval(Duration.ofMillis(200))
                         .until(() -> count(output.getAll(), READ_WARN) > 0 || probe(adapter, output));
+                String logsBefore = output.getAll();
                 long start = System.nanoTime();
                 List<Book> result = adapter.loadAvailableBooks(10);
                 Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
-                // Then : repli quasi instantané, bien en deçà du timeout de commande, résultat de la base
+                String newLogs = output.getAll().substring(logsBefore.length());
+                // Then : résultat de la base ; repli par rejet immédiat (cause autre qu'un délai de commande) et
+                // durée très inférieure au délai de commande de 3 s
                 assertThat(result).hasSize(3);
-                assertThat(elapsed).isLessThan(Duration.ofMillis(400));
+                assertThat(newLogs).contains(READ_WARN).doesNotContain(QueryTimeoutException.class.getSimpleName());
+                assertThat(COMMAND_TIMEOUT).isGreaterThan(FALLBACK_THRESHOLD.multipliedBy(2));
+                assertThat(elapsed).isLessThan(FALLBACK_THRESHOLD);
                 assertThat(output.getAll()).doesNotContain(WRITE_WARN);
             } finally {
                 factory.destroy();
@@ -260,6 +276,31 @@ class AvailableBooksCacheAdapterResilienceTest {
         verify(operations, times(1)).set(eq(KEY), anyString(), eq(TTL));
         assertThat(count(output.getAll(), UNREADABLE_WARN)).isEqualTo(1);
         assertThat(output.getAll()).doesNotContain("MARQUEUR-VALEUR");
+    }
+
+    static Stream<Arguments> unreadableValues() {
+        return Stream.of(
+                Arguments.of("pas du json MARQUEUR-VALEUR", AvailableBooksCacheCodec.REASON_UNREADABLE_JSON),
+                Arguments.of("[{\"id\":\"6f1b2c3d-0000-4000-8000-000000000001\",\"isbn\":\"123\","
+                        + "\"title\":\"MARQUEUR-VALEUR\",\"author\":\"A\",\"totalCopies\":3,\"availableCopies\":2}]",
+                        AvailableBooksCacheCodec.REASON_INVALID_ID_OR_ISBN));
+    }
+
+    @ParameterizedTest
+    @MethodSource("unreadableValues")
+    void loadAvailableBooks_quandValeurIllisible_alorsWarnAvecMotifFixeEtJamaisLaValeur(String value,
+                                                                                         String expectedReason,
+                                                                                         CapturedOutput output) {
+        // Given : une valeur illisible contenant un marqueur unique
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        ValueOperations<String, String> operations = operationsOf(template);
+        when(operations.get(KEY)).thenReturn(value);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, template, TTL);
+        // When
+        adapter.loadAvailableBooks(10);
+        // Then : RC-18, le WARN porte le motif du codec, jamais la valeur lue
+        assertThat(count(output.getAll(), UNREADABLE_WARN)).isEqualTo(1);
+        assertThat(output.getAll()).contains("reason=" + expectedReason).doesNotContain("MARQUEUR-VALEUR");
     }
 
     @Test
