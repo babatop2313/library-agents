@@ -10,7 +10,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.example.library.TestcontainersConfiguration;
+import com.example.library.PostgresTestcontainersConfiguration;
+import com.example.library.RedisTestcontainersConfiguration;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
 /** RM-MCP-10 : sans le profil mcp-local, /mcp exige un JWT valide (decisions 3 et 4). */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import({PostgresTestcontainersConfiguration.class, RedisTestcontainersConfiguration.class})
 class McpSecurityTest {
 
     private static final String INITIALIZE = """

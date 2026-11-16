@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Optional;
 
-import com.example.library.TestcontainersConfiguration;
+import com.example.library.PostgresTestcontainersConfiguration;
 import com.example.library.catalog.domain.service.AvailableBooksSelection;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Persistance reelle (PostgreSQL via Testcontainers, schema Flyway V1) : RM-07, RM-CAT-04, RM-CAT-08. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, BookPersistenceAdapter.class, BookPersistenceMapper.class})
+@Import({PostgresTestcontainersConfiguration.class, BookPersistenceAdapter.class, BookPersistenceMapper.class})
 class BookPersistenceAdapterTest {
 
     @Autowired
