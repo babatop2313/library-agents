@@ -132,6 +132,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Attentes asynchrones dans les tests (version gérée par le BOM Spring Boot) -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Règles d'architecture (ArchitectureTest) -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>

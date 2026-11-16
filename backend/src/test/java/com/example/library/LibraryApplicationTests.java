@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Import;
  * Vérifie que l'application démarre : sécurité, Flyway et JPA configurés, base PostgreSQL réelle.
  */
 @SpringBootTest
-@Import(TestcontainersConfiguration.class)
+@Import({PostgresTestcontainersConfiguration.class, RedisTestcontainersConfiguration.class})
 class LibraryApplicationTests {
 
     @Test

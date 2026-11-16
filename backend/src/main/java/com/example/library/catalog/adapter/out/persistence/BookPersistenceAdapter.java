@@ -14,7 +14,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("bookPersistenceAdapter")
 class BookPersistenceAdapter
         implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort {
 

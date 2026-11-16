@@ -6,7 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.library.TestcontainersConfiguration;
+import com.example.library.PostgresTestcontainersConfiguration;
+import com.example.library.RedisTestcontainersConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,7 +31,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("mcp-local")
-@Import(TestcontainersConfiguration.class)
+@Import({PostgresTestcontainersConfiguration.class, RedisTestcontainersConfiguration.class})
 class McpLocalSecurityTest {
 
     private static final String INITIALIZE = """

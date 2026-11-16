@@ -6,7 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Optional;
 
-import com.example.library.TestcontainersConfiguration;
+import com.example.library.PostgresTestcontainersConfiguration;
+import com.example.library.RedisTestcontainersConfiguration;
 import com.example.library.catalog.domain.service.AvailableBooksSelection;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
@@ -17,7 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
+import org.testcontainers.containers.GenericContainer;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
@@ -26,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Persistance reelle (PostgreSQL via Testcontainers, schema Flyway V1) : RM-07, RM-CAT-04, RM-CAT-08. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, BookPersistenceAdapter.class, BookPersistenceMapper.class})
+@Import({PostgresTestcontainersConfiguration.class, BookPersistenceAdapter.class, BookPersistenceMapper.class})
 class BookPersistenceAdapterTest {
 
     @Autowired
@@ -38,9 +41,33 @@ class BookPersistenceAdapterTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private ApplicationContext context;
+
     @AfterEach
     void cleanUp() {
         jdbc.update("DELETE FROM book");
+    }
+
+    @Test
+    void contexte_quandSliceJpa_alorsDemarreSansRedis() {
+        // Given : le slice JPA importe seulement PostgreSQL
+        // When : on cherche un conteneur ou une connexion Redis dans le contexte
+        // Then : aucun conteneur Redis de test, aucun conteneur générique, aucune fabrique de connexion Redis
+        assertThat(context.containsBean("redisContainer")).isFalse();
+        assertThat(context.getBeansOfType(GenericContainer.class).values())
+                .extracting(container -> container.getDockerImageName())
+                .doesNotContain(RedisTestcontainersConfiguration.REDIS_IMAGE);
+        // classe chargée par réflexion : ce package de test n'importe pas spring-data-redis
+        assertThat(context.getBeanNamesForType(redisConnectionFactoryType())).isEmpty();
+    }
+
+    private static Class<?> redisConnectionFactoryType() {
+        try {
+            return Class.forName("org.springframework.data.redis.connection.RedisConnectionFactory");
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

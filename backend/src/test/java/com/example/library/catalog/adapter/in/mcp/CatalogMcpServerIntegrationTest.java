@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.example.library.TestcontainersConfiguration;
+import com.example.library.PostgresTestcontainersConfiguration;
+import com.example.library.RedisTestcontainersConfiguration;
+import com.example.library.RedisTestcontainersConfiguration.RedisTestCache;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
@@ -42,7 +44,7 @@ import tools.jackson.databind.json.JsonMapper;
  * sont verifies).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(TestcontainersConfiguration.class)
+@Import({PostgresTestcontainersConfiguration.class, RedisTestcontainersConfiguration.class})
 class CatalogMcpServerIntegrationTest {
 
     @LocalServerPort
@@ -50,6 +52,10 @@ class CatalogMcpServerIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    /** Les livres sont insérés en SQL direct (sans invalidation) : le cache Redis est vidé avant et après chaque test. */
+    @Autowired
+    private RedisTestCache redisTestCache;
 
     @Autowired
     private JwtEncoder jwtEncoder;
@@ -60,6 +66,7 @@ class CatalogMcpServerIntegrationTest {
     @BeforeEach
     void connect() {
         jdbc.update("DELETE FROM book");
+        redisTestCache.flushAll();
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(UUID.randomUUID().toString())
@@ -82,6 +89,7 @@ class CatalogMcpServerIntegrationTest {
     void disconnect() {
         client.closeGracefully();
         jdbc.update("DELETE FROM book");
+        redisTestCache.flushAll();
     }
 
     private void givenBook(String isbn, String title, int total, int available) {
