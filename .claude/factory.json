@@ -1,4 +1,6 @@
 {
   "architecture": "hexagonal",
-  "baseBranch": "develop"
+  "baseBranch": "develop",
+  "backend": "backend",
+  "frontend": "frontend"
 }

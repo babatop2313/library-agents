@@ -38,14 +38,14 @@
     ]
   },
   "extraKnownMarketplaces": {
-    "factory-dev": {
+    "top": {
       "source": {
         "source": "github",
-        "repo": "babatop2313/factory-dev"
+        "repo": "babatop2313/top-factory"
       }
     }
   },
   "enabledPlugins": {
-    "factory@factory-dev": true
+    "top-factory@top": true
   }
 }
