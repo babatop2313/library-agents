@@ -32,8 +32,16 @@ backend/                                   ← code Spring Boot, organisé selon
   src/main/java/com/example/library/         package racine
   src/main/resources/db/migration/           migrations Flyway V<n>__<description>.sql
   src/test/java/com/example/library/ArchitectureTest.java   règles ArchUnit (ne jamais supprimer ni modifier)
+library-web/                               ← frontend Angular (src/app/core, shared, features)
 docs/specs/                                ← une spec par fonctionnalité
 ```
+
+## Frontend
+- Dossier `library-web/` : **Angular 21**, composants standalone, tests Vitest, lint angular-eslint.
+- Interface : PrimeNG 21 (thème Aura, PrimeIcons) ; Bootstrap 5 pour la grille et les utilitaires uniquement.
+- `proxy.conf.json` route `/api` vers `http://localhost:8080` en développement : aucune URL d'API en dur.
+- Erreurs HTTP : `core/http/error.interceptor.ts` (notifications `p-toast`, lecture du `ProblemDetail`).
+- Node.js ≥ 24.0 requis (Angular 22 exigerait Node ≥ 24.15).
 
 ## Sécurité
 - JWT signé HS256 (`JWT_SECRET`), rôles dans la claim `roles` → `ROLE_<rôle>`.
@@ -55,5 +63,9 @@ docs/specs/                                ← une spec par fonctionnalité
 | Un seul test | `cd backend && ./mvnw test -Dtest=NomDuTest` |
 | Vérifier l'architecture | `cd backend && ./mvnw test -Dtest=ArchitectureTest` |
 | Lancer l'API | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local` (avec `DB_PASSWORD` et `JWT_SECRET` définis) |
+| Lancer le frontend (backend démarré) | `cd library-web && npx ng serve` → http://localhost:4200 |
+| Tests frontend | `cd library-web && npx ng test --watch=false` |
+| Lint frontend | `cd library-web && npm run lint` |
+| Build frontend | `cd library-web && npx ng build` |
 
 
