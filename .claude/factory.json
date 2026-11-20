@@ -2,5 +2,5 @@
   "architecture": "hexagonal",
   "baseBranch": "develop",
   "backend": "backend",
-  "frontend": null
+  "frontend": "library-web"
 }
