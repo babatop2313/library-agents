@@ -51,6 +51,14 @@ app:
   security:
     jwt:
       secret: ${JWT_SECRET:pour_le_test_on_fait_ce_qu_on_ose_pas_faire_en_vrai}       # au moins 32 caractères, jamais commité
+      ttl: ${JWT_TTL:PT1H}        # durée du jeton et du cookie (ISO-8601)
+      cookie-name: ACCESS_TOKEN
+    bcrypt:
+      strength: 10
+  bootstrap:
+    librarian:                    # premier bibliothécaire créé au démarrage s'il n'en existe aucun ; jamais de valeur par défaut
+      email: ${BOOTSTRAP_LIBRARIAN_EMAIL:}
+      password: ${BOOTSTRAP_LIBRARIAN_PASSWORD:}
   cache:
     ttl:
       default: 10m                # TTL obligatoire sur chaque clé Redis, par type de donnée si besoin
