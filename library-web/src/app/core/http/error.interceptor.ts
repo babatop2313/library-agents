@@ -9,7 +9,9 @@ const TECHNICAL_ERROR = 'Une erreur technique est survenue. Réessayez plus tard
 const FORBIDDEN = "Vous n'avez pas les droits nécessaires";
 
 /**
- * Traduit les erreurs HTTP en notifications. Le 401 est laissé à l'intercepteur d'authentification.
+ * Traduit les erreurs HTTP en notifications. Le 401 (ProblemDetail `UNAUTHENTICATED`, ou `INVALID_CREDENTIALS`
+ * affiché dans le formulaire de connexion) est laissé à `authInterceptor` / à la page : aucune notification ici.
+ * Le 403 (`ACCESS_DENIED`) affiche un message fixe, sans lire le corps. Placé après `authInterceptor`.
  * L'erreur est toujours propagée : l'appelant peut reporter les erreurs par champ sur son formulaire.
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {

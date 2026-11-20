@@ -1,18 +1,39 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
+import { finalize } from 'rxjs';
+
+import { AuthService } from '../../auth/auth.service';
+import { roleLabel, roleSeverity } from '../../auth/role-label';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink],
+  imports: [RouterLink, ButtonModule, TagModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <header class="app-header d-flex align-items-center px-4 py-3">
-      <a routerLink="/" class="app-title d-flex align-items-center gap-2">
-        <i class="pi pi-book" aria-hidden="true"></i>
-        <span>Bibliothèque</span>
-      </a>
-    </header>
-  `,
+  templateUrl: './header.html',
   styleUrl: './header.scss',
 })
-export class Header {}
+export class Header {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected readonly user = this.auth.user;
+  protected readonly label = roleLabel;
+  protected readonly severity = roleSeverity;
+
+  protected readonly loggingOut = signal(false);
+
+  protected logout(): void {
+    if (this.loggingOut()) {
+      return;   // double clic : un seul appel de déconnexion
+    }
+    this.loggingOut.set(true);
+    this.auth
+      .logout()
+      .pipe(finalize(() => this.loggingOut.set(false)))
+      .subscribe(() => {
+        void this.router.navigate(['/login'], { replaceUrl: true });
+      });
+  }
+}
