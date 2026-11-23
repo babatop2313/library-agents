@@ -1,0 +1,258 @@
+[
+  {
+    "id": "00000000-0000-4000-8000-000000001001",
+    "isbn": "9782070360024",
+    "title": "L'Étranger",
+    "author": "Albert Camus",
+    "totalCopies": 3,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001002",
+    "isbn": "9782070360420",
+    "title": "La Peste",
+    "author": "Albert Camus",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001003",
+    "isbn": "9782253002864",
+    "title": "Germinal",
+    "author": "Émile Zola",
+    "totalCopies": 5,
+    "availableCopies": 4
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001004",
+    "isbn": "9782253010005",
+    "title": "Nana",
+    "author": "Émile Zola",
+    "totalCopies": 2,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001005",
+    "isbn": "9782100000011",
+    "title": "100% Python",
+    "author": "Claire Dupuis",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001006",
+    "isbn": "9782100000028",
+    "title": "Le Python",
+    "author": "Marc Aubry",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001007",
+    "isbn": "9782253090000",
+    "title": "Les Misérables",
+    "author": "Victor Hugo",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001008",
+    "isbn": "9782253090001",
+    "title": "Notre-Dame de Paris",
+    "author": "Victor Hugo",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001009",
+    "isbn": "9782253090002",
+    "title": "Les Contemplations",
+    "author": "Victor Hugo",
+    "totalCopies": 3,
+    "availableCopies": 3
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001010",
+    "isbn": "9782253090003",
+    "title": "Hernani",
+    "author": "Victor Hugo",
+    "totalCopies": 4,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001011",
+    "isbn": "9782253090004",
+    "title": "Ruy Blas",
+    "author": "Victor Hugo",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001012",
+    "isbn": "9782253090005",
+    "title": "Quatrevingt-treize",
+    "author": "Victor Hugo",
+    "totalCopies": 2,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001013",
+    "isbn": "9782253090006",
+    "title": "Les Travailleurs de la mer",
+    "author": "Victor Hugo",
+    "totalCopies": 3,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001014",
+    "isbn": "9782253090007",
+    "title": "L'Homme qui rit",
+    "author": "Victor Hugo",
+    "totalCopies": 4,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001015",
+    "isbn": "9782253090008",
+    "title": "Le Dernier Jour d'un condamné",
+    "author": "Victor Hugo",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001016",
+    "isbn": "9782253090009",
+    "title": "Claude Gueux",
+    "author": "Victor Hugo",
+    "totalCopies": 2,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001017",
+    "isbn": "9782253090010",
+    "title": "Les Châtiments",
+    "author": "Victor Hugo",
+    "totalCopies": 3,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001018",
+    "isbn": "9782253090011",
+    "title": "Les Orientales",
+    "author": "Victor Hugo",
+    "totalCopies": 4,
+    "availableCopies": 3
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001019",
+    "isbn": "9782253090012",
+    "title": "Cromwell",
+    "author": "Victor Hugo",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001020",
+    "isbn": "9782253090013",
+    "title": "Bug-Jargal",
+    "author": "Victor Hugo",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001021",
+    "isbn": "9782253090014",
+    "title": "Han d'Islande",
+    "author": "Victor Hugo",
+    "totalCopies": 3,
+    "availableCopies": 3
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001022",
+    "isbn": "9782100000035",
+    "title": "Mon_livre_test",
+    "author": "Auteur Souligné",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001023",
+    "isbn": "9782100000042",
+    "title": "Chemin\\Secret",
+    "author": "Auteur Antislash",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001024",
+    "isbn": "9782253004226",
+    "title": "Bel-Ami",
+    "author": "Guy de Maupassant",
+    "totalCopies": 3,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001025",
+    "isbn": "9782070408504",
+    "title": "Candide",
+    "author": "Voltaire",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001026",
+    "isbn": "9782253004868",
+    "title": "Madame Bovary",
+    "author": "Gustave Flaubert",
+    "totalCopies": 2,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001027",
+    "isbn": "9782070612758",
+    "title": "Le Petit Prince",
+    "author": "Antoine de Saint-Exupéry",
+    "totalCopies": 3,
+    "availableCopies": 3
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001028",
+    "isbn": "9782253098041",
+    "title": "Le Comte de Monte-Cristo",
+    "author": "Alexandre Dumas",
+    "totalCopies": 4,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001029",
+    "isbn": "9782080700339",
+    "title": "Émile ou De l'éducation",
+    "author": "Jean-Jacques Rousseau",
+    "totalCopies": 1,
+    "availableCopies": 1
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001030",
+    "isbn": "9782070413119",
+    "title": "Le Rouge et le Noir",
+    "author": "Stendhal",
+    "totalCopies": 2,
+    "availableCopies": 2
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001031",
+    "isbn": "9782100000059",
+    "title": "Épuisé : le dernier exemplaire",
+    "author": "Auteur Fictif",
+    "totalCopies": 1,
+    "availableCopies": 0
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000001032",
+    "isbn": "9782100000066",
+    "title": "Tout est prêté",
+    "author": "Auteur Fictif",
+    "totalCopies": 3,
+    "availableCopies": 0
+  }
+]

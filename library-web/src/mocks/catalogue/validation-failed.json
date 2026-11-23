@@ -1,0 +1,9 @@
+{
+  "type": "about:blank",
+  "title": "Validation échouée",
+  "status": 400,
+  "detail": "La requête est invalide",
+  "instance": "/api/v1/books",
+  "code": "VALIDATION_FAILED",
+  "errors": []
+}

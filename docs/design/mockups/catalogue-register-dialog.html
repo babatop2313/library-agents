@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — catalogue-register-dialog (validé)</title>
+<style>
+  /* Jetons : thème Aura (PrimeNG 21), palette primaire violette (design system validé : primary = violet, color = {primary.600}). */
+  :root {
+    --p-primary-50: #f5f3ff; --p-primary-600: #7c3aed; --p-primary-700: #6d28d9; --p-primary-800: #5b21b6;
+    --p-primary-color: #7c3aed; --p-primary-contrast-color: #ffffff;
+    --p-fuchsia-600: #c026d3;
+    --app-header-bg: linear-gradient(90deg, var(--p-primary-600) 0%, var(--p-fuchsia-600) 100%);
+    --p-surface-0: #ffffff; --p-surface-50: #f8fafc; --p-surface-100: #f1f5f9; --p-surface-200: #e2e8f0;
+    --p-surface-300: #cbd5e1; --p-surface-400: #94a3b8; --p-surface-500: #64748b; --p-surface-700: #334155;
+    --p-surface-900: #0f172a;
+    --p-text-color: #334155; --p-text-muted-color: #64748b;
+    --p-red-50: #fef2f2; --p-red-200: #fecaca; --p-red-400: #f87171; --p-red-600: #dc2626; --p-red-700: #b91c1c;
+    --p-green-50: #f0fdf4; --p-green-200: #bbf7d0; --p-green-700: #15803d;
+    --radius-md: 6px; --radius-xl: 12px;
+    --app-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--app-font); color: var(--p-text-color); background: #e9edf2; font-size: 16px; line-height: 1.5; }
+  .ico { display: inline-flex; align-items: center; justify-content: center; width: 1em; line-height: 1; }
+  /* Icônes : traits fins façon PrimeIcons (implémentation : classes pi pi-*). */
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; vertical-align: -0.125em; }
+  code { font-size: 13px; }
+
+  .board { max-width: 1240px; margin: 0 auto; padding: 32px 24px 64px; }
+  .board > h1 { font-size: 22px; margin: 0 0 4px; color: var(--p-surface-900); }
+  .board > p.lead { margin: 0 0 32px; color: var(--p-text-muted-color); font-size: 14px; }
+  .state-title { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--p-surface-500); margin: 40px 0 8px; }
+  .state-note { font-size: 14px; color: var(--p-text-muted-color); margin: 0 0 12px; max-width: 900px; }
+
+  /* Scène : page Catalogue assombrie par le masque modal */
+  .stage { position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(15,23,42,.12); background: var(--p-surface-0); }
+  .stage .ghost { padding: 0 0 24px; }
+  .ghost-header { height: 56px; background: var(--app-header-bg); }
+  .ghost-line { height: 14px; background: var(--p-surface-200); border-radius: 4px; margin: 16px 24px 0; }
+  .mask { position: absolute; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  .stage.desk { min-height: 760px; }
+  .stage.mobile { width: 390px; min-height: 800px; }
+
+  /* p-dialog */
+  .dialog { width: 32rem; max-width: 100%; background: var(--p-surface-0); border-radius: var(--radius-xl); box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); display: flex; flex-direction: column; max-height: 90vh; }
+  .mobile .dialog { width: calc(390px - 32px); }
+  .d-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px; }
+  .d-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--p-surface-900); }
+  .close { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--p-surface-500); font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
+  .close.disabled { color: var(--p-surface-300); }
+  .d-content { padding: 4px 20px 8px; overflow: auto; }
+  .d-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 20px; }
+  .mobile .d-footer .btn { flex: 1 1 50%; }
+
+  .mention { margin: 0 0 16px; font-size: 14px; color: var(--p-text-muted-color); }
+  .field { margin-bottom: 20px; }
+  .field:last-child { margin-bottom: 4px; }
+  label { display: block; font-weight: 500; margin-bottom: 6px; color: var(--p-surface-700); }
+  .input { width: 100%; font: inherit; color: var(--p-text-color); height: 42px; padding: 8px 12px; border: 1px solid var(--p-surface-300); border-radius: var(--radius-md); background: var(--p-surface-0); }
+  .input.invalid { border-color: var(--p-red-400); }
+  .input.readonly { background: var(--p-surface-50); }
+  .focus { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+  .help { display: block; margin-top: 4px; font-size: 14px; color: var(--p-text-muted-color); }
+  .err { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; font-size: 14px; color: var(--p-red-600); }
+  .err .ico { margin-top: 3px; font-size: 13px; }
+
+  .number { display: flex; width: 12rem; }
+  .mobile .number { width: 100%; }
+  .number .input { border-radius: 0; text-align: left; border-left: 0; border-right: 0; }
+  .number .nb { width: 42px; height: 42px; border: 1px solid var(--p-surface-300); background: var(--p-surface-0); color: var(--p-surface-500); font-size: 18px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .number .nb:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+  .number .nb:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+  .number.invalid .nb, .number.invalid .input { border-color: var(--p-red-400); }
+
+  .msg { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin-bottom: 16px; border: 1px solid var(--p-red-200); background: var(--p-red-50); color: var(--p-red-700); border-radius: var(--radius-md); font-size: 14px; }
+  .msg strong { display: block; font-size: 15px; }
+  .msg ul { margin: 4px 0 0; padding-left: 18px; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 500; padding: 8px 14px; border-radius: var(--radius-md); border: 1px solid transparent; white-space: nowrap; height: 42px; }
+  .btn-primary { background: var(--p-primary-color); border-color: var(--p-primary-color); color: var(--p-primary-contrast-color); }
+  .btn-primary.loading { opacity: .6; }
+  .btn-text { background: transparent; color: var(--p-surface-700); }
+  .btn-text.disabled { color: var(--p-surface-400); }
+
+  /* p-toast */
+  .toast { position: absolute; top: 72px; right: 16px; width: 22rem; max-width: calc(100% - 32px); display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--p-green-50); border: 1px solid var(--p-green-200); color: var(--p-green-700); box-shadow: 0 4px 8px rgba(0,0,0,.06); font-size: 14px; }
+  .toast strong { display: block; font-size: 15px; }
+  .row { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .caption { font-size: 13px; color: var(--p-surface-500); margin-top: 8px; }
+</style>
+</head>
+<body>
+<!-- Planche d'icônes interne (aucune ressource externe) : équivalents visuels des PrimeIcons. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-times" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-times-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-spinner" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></symbol>
+  </defs>
+</svg>
+<div class="board">
+  <h1>catalogue-register-dialog — Ajouter un livre</h1>
+  <p class="lead">Statut : validé (2026-11-23, remarques intégrées) · <code>p-dialog</code> modal ouvert depuis <code>/catalogue</code> (bibliothécaire) · Données fictives · Icônes vectorielles au trait (équivalents PrimeIcons <code>pi pi-*</code>), aucun emoji · Palette primaire violette.</p>
+
+  <!-- ===================================================== 1. Ouverture -->
+  <h2 class="state-title">1. État principal — ouverture (desktop)</h2>
+  <p class="state-note">Formulaire vide et réinitialisé à chaque ouverture ; focus sur « ISBN ». Masque <code>rgba(0,0,0,.4)</code> sur la page Catalogue ; clic sur le masque sans effet ; Échap et la croix ferment. Chaque champ : libellé visible, aide reliée par <code>aria-describedby</code>.</p>
+  <div class="stage desk">
+    <div class="ghost"><div class="ghost-header"></div><div class="ghost-line" style="width:20%;height:28px;margin-top:24px"></div><div class="ghost-line" style="width:35%"></div><div class="ghost-line" style="width:90%;height:300px"></div></div>
+    <div class="mask">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t1">
+        <div class="d-header"><h2 id="t1">Ajouter un livre</h2><button class="close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button></div>
+        <form class="d-content" novalidate>
+          <p class="mention">Tous les champs sont obligatoires.</p>
+          <div class="field">
+            <label for="a-isbn">ISBN</label>
+            <input id="a-isbn" class="input focus" type="text" aria-required="true" aria-describedby="a-isbn-help">
+            <small id="a-isbn-help" class="help">13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).</small>
+          </div>
+          <div class="field">
+            <label for="a-title">Titre</label>
+            <input id="a-title" class="input" type="text" aria-required="true" aria-describedby="a-title-help">
+            <small id="a-title-help" class="help">255 caractères maximum.</small>
+          </div>
+          <div class="field">
+            <label for="a-author">Auteur</label>
+            <input id="a-author" class="input" type="text" aria-required="true" aria-describedby="a-author-help">
+            <small id="a-author-help" class="help">Prénom et nom, 255 caractères maximum.</small>
+          </div>
+          <div class="field">
+            <label for="a-copies">Nombre d'exemplaires</label>
+            <div class="number">
+              <span class="nb" aria-label="Diminuer"><svg class="i"><use href="#i-minus"/></svg></span>
+              <input id="a-copies" class="input" type="text" inputmode="numeric" aria-required="true" aria-describedby="a-copies-help">
+              <span class="nb" aria-label="Augmenter"><svg class="i"><use href="#i-plus"/></svg></span>
+            </div>
+            <small id="a-copies-help" class="help">Entre 1 et 1000.</small>
+          </div>
+        </form>
+        <div class="d-footer">
+          <button class="btn btn-text" type="button">Annuler</button>
+          <button class="btn btn-primary" type="submit"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 2. Erreurs client -->
+  <h2 class="state-title">2. Soumission d'un formulaire incomplet (validation client)</h2>
+  <p class="state-note">« Enregistrer » reste cliquable : le clic n'envoie rien, affiche toutes les erreurs et place le focus sur le premier champ en erreur (ISBN). Bordure rouge + icône + texte ; <code>aria-invalid="true"</code> ; <code>aria-describedby</code> = aide + erreur. Ici : ISBN de 12 chiffres, titre rempli, auteur vide, exemplaires vide.</p>
+  <div class="stage desk">
+    <div class="ghost"><div class="ghost-header"></div><div class="ghost-line" style="width:20%;height:28px;margin-top:24px"></div><div class="ghost-line" style="width:90%;height:300px"></div></div>
+    <div class="mask">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t2">
+        <div class="d-header"><h2 id="t2">Ajouter un livre</h2><button class="close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button></div>
+        <form class="d-content" novalidate>
+          <p class="mention">Tous les champs sont obligatoires.</p>
+          <div class="field">
+            <label for="b-isbn">ISBN</label>
+            <input id="b-isbn" class="input invalid focus" type="text" value="978-2-07-03682" aria-invalid="true" aria-describedby="b-isbn-help b-isbn-error">
+            <small id="b-isbn-help" class="help">13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).</small>
+            <div id="b-isbn-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>L'ISBN doit comporter 13 chiffres (tirets et espaces acceptés).</span></div>
+          </div>
+          <div class="field">
+            <label for="b-title">Titre</label>
+            <input id="b-title" class="input" type="text" value="L'Étranger" aria-describedby="b-title-help">
+            <small id="b-title-help" class="help">255 caractères maximum.</small>
+          </div>
+          <div class="field">
+            <label for="b-author">Auteur</label>
+            <input id="b-author" class="input invalid" type="text" aria-invalid="true" aria-describedby="b-author-help b-author-error">
+            <small id="b-author-help" class="help">Prénom et nom, 255 caractères maximum.</small>
+            <div id="b-author-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>Saisissez l'auteur du livre.</span></div>
+          </div>
+          <div class="field">
+            <label for="b-copies">Nombre d'exemplaires</label>
+            <div class="number invalid">
+              <span class="nb"><svg class="i"><use href="#i-minus"/></svg></span><input id="b-copies" class="input" type="text" aria-invalid="true" aria-describedby="b-copies-help b-copies-error"><span class="nb"><svg class="i"><use href="#i-plus"/></svg></span>
+            </div>
+            <small id="b-copies-help" class="help">Entre 1 et 1000.</small>
+            <div id="b-copies-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>Saisissez le nombre d'exemplaires.</span></div>
+          </div>
+        </form>
+        <div class="d-footer">
+          <button class="btn btn-text" type="button">Annuler</button>
+          <button class="btn btn-primary" type="submit"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 3. Erreurs serveur -->
+  <h2 class="state-title">3. Erreurs renvoyées par le serveur</h2>
+  <p class="state-note">À gauche : 409 <code>ISBN_ALREADY_EXISTS</code> (sans <code>errors[]</code>) affiché sous l'ISBN — <code>detail</code> du backend s'il existe, sinon le texte fixe figuré ici ; focus sur l'ISBN ; valeurs conservées. À droite : 400 avec une erreur rattachée (<code>copies</code>, message du backend tel quel) et une erreur non rattachée (champ inconnu) en <code>p-message</code> général, qui reçoit le focus quand aucun champ n'est en erreur. Toute erreur serveur d'un champ disparaît à sa première modification.</p>
+  <div class="row">
+    <div class="stage" style="width:560px;min-height:720px">
+      <div class="ghost"><div class="ghost-header"></div></div>
+      <div class="mask">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t3">
+          <div class="d-header"><h2 id="t3">Ajouter un livre</h2><button class="close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button></div>
+          <form class="d-content" novalidate>
+            <p class="mention">Tous les champs sont obligatoires.</p>
+            <div class="field">
+              <label for="c-isbn">ISBN</label>
+              <input id="c-isbn" class="input invalid focus" type="text" value="978-2-07-036002-4" aria-invalid="true" aria-describedby="c-isbn-help c-isbn-error">
+              <small id="c-isbn-help" class="help">13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).</small>
+              <div id="c-isbn-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>Cet ISBN existe déjà au catalogue</span></div>
+            </div>
+            <div class="field"><label for="c-title">Titre</label><input id="c-title" class="input" type="text" value="L'Étranger"><small class="help">255 caractères maximum.</small></div>
+            <div class="field"><label for="c-author">Auteur</label><input id="c-author" class="input" type="text" value="Albert Camus"><small class="help">Prénom et nom, 255 caractères maximum.</small></div>
+            <div class="field"><label for="c-copies">Nombre d'exemplaires</label><div class="number"><span class="nb"><svg class="i"><use href="#i-minus"/></svg></span><input id="c-copies" class="input" type="text" value="3"><span class="nb"><svg class="i"><use href="#i-plus"/></svg></span></div><small class="help">Entre 1 et 1000.</small></div>
+          </form>
+          <div class="d-footer">
+            <button class="btn btn-text" type="button">Annuler</button>
+            <button class="btn btn-primary" type="submit"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span>Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="width:560px;min-height:720px">
+      <div class="ghost"><div class="ghost-header"></div></div>
+      <div class="mask">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t4">
+          <div class="d-header"><h2 id="t4">Ajouter un livre</h2><button class="close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button></div>
+          <form class="d-content" novalidate>
+            <p class="mention">Tous les champs sont obligatoires.</p>
+            <div class="msg" role="alert" tabindex="-1">
+              <span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span>
+              <div><strong>Le livre n'a pas pu être enregistré.</strong>
+                <ul><li>Le champ 'publisher' n'est pas reconnu</li></ul>
+              </div>
+            </div>
+            <div class="field"><label for="d-isbn">ISBN</label><input id="d-isbn" class="input" type="text" value="9782070368228"><small class="help">13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).</small></div>
+            <div class="field"><label for="d-title">Titre</label><input id="d-title" class="input" type="text" value="L'Étranger"><small class="help">255 caractères maximum.</small></div>
+            <div class="field"><label for="d-author">Auteur</label><input id="d-author" class="input" type="text" value="Albert Camus"><small class="help">Prénom et nom, 255 caractères maximum.</small></div>
+            <div class="field">
+              <label for="d-copies">Nombre d'exemplaires</label>
+              <div class="number invalid"><span class="nb"><svg class="i"><use href="#i-minus"/></svg></span><input id="d-copies" class="input focus" type="text" value="3" aria-invalid="true" aria-describedby="d-copies-help d-copies-error"><span class="nb"><svg class="i"><use href="#i-plus"/></svg></span></div>
+              <small id="d-copies-help" class="help">Entre 1 et 1000.</small>
+              <div id="d-copies-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>Le champ 'copies' est hors des bornes autorisées</span></div>
+            </div>
+          </form>
+          <div class="d-footer">
+            <button class="btn btn-text" type="button">Annuler</button>
+            <button class="btn btn-primary" type="submit"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span>Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="caption">Repli d'un 400 sans <code>errors[]</code> ou avec <code>errors: []</code> : « Le livre n'a pas pu être enregistré. » + « La demande n'a pas pu être traitée. Vérifiez les champs, puis réessayez. »</p>
+
+  <!-- ===================================================== 4. Envoi en cours + succès -->
+  <h2 class="state-title">4. Envoi en cours, puis succès</h2>
+  <p class="state-note">Pendant l'appel : « Enregistrer » en <code>[loading]</code> (spinner, libellé conservé) et désactivé ; champs en lecture seule ; « Annuler », la croix et Échap inactifs ; un double clic n'envoie qu'une requête. Succès (201) : dialogue fermé, toast succès 3 s, liste rechargée (même page, même recherche), focus rendu à « Ajouter un livre ». En cas de 403, 5xx ou erreur réseau : toast de l'<code>errorInterceptor</code>, dialogue ouvert avec les valeurs, focus sur « Enregistrer ».</p>
+  <div class="row">
+    <div class="stage" style="width:560px;min-height:640px">
+      <div class="ghost"><div class="ghost-header"></div></div>
+      <div class="mask">
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t5">
+          <div class="d-header"><h2 id="t5">Ajouter un livre</h2><button class="close disabled" type="button" aria-label="Fermer" disabled><svg class="i"><use href="#i-times"/></svg></button></div>
+          <form class="d-content" novalidate aria-busy="true">
+            <p class="mention">Tous les champs sont obligatoires.</p>
+            <div class="field"><label for="e-isbn">ISBN</label><input id="e-isbn" class="input readonly" type="text" value="978-2-07-036822-8" readonly></div>
+            <div class="field"><label for="e-title">Titre</label><input id="e-title" class="input readonly" type="text" value="L'Étranger" readonly></div>
+            <div class="field"><label for="e-author">Auteur</label><input id="e-author" class="input readonly" type="text" value="Albert Camus" readonly></div>
+            <div class="field"><label for="e-copies">Nombre d'exemplaires</label><div class="number"><span class="nb"><svg class="i"><use href="#i-minus"/></svg></span><input id="e-copies" class="input readonly" type="text" value="3" readonly><span class="nb"><svg class="i"><use href="#i-plus"/></svg></span></div></div>
+          </form>
+          <div class="d-footer">
+            <button class="btn btn-text disabled" type="button" disabled>Annuler</button>
+            <button class="btn btn-primary loading" type="submit" disabled><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-spinner"/></svg></span>Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="width:560px;min-height:640px">
+      <div class="ghost-header"></div>
+      <div style="padding:24px">
+        <div style="font-size:1.75rem;font-weight:600;color:var(--p-surface-900)">Catalogue</div>
+        <div style="color:var(--p-text-muted-color)">Livres disponibles à l'emprunt</div>
+        <button class="btn btn-primary focus" type="button" style="margin-top:16px"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+        <div class="ghost-line" style="margin:24px 0 0;height:260px;width:100%"></div>
+      </div>
+      <div class="toast" role="status">
+        <span class="ico" aria-hidden="true" style="font-size:20px"><svg class="i"><use href="#i-check-circle"/></svg></span>
+        <div><strong>Livre enregistré</strong>« L'Étranger » a été ajouté au catalogue.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 5. Mobile -->
+  <h2 class="state-title">5. Mobile (390 px)</h2>
+  <p class="state-note">Largeur <code>calc(100vw - 32px)</code> (16 px de marge) ; hauteur max 90vh, contenu défilant, pied toujours visible ; boutons à 50 % chacun ; champ « Nombre d'exemplaires » pleine largeur. Ici : erreur de longueur sur le titre (après trim).</p>
+  <div class="stage mobile">
+    <div class="ghost"><div class="ghost-header"></div></div>
+    <div class="mask">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t6">
+        <div class="d-header"><h2 id="t6">Ajouter un livre</h2><button class="close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button></div>
+        <form class="d-content" novalidate>
+          <p class="mention">Tous les champs sont obligatoires.</p>
+          <div class="field"><label for="f-isbn">ISBN</label><input id="f-isbn" class="input" type="text" value="9782253004226"><small class="help">13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).</small></div>
+          <div class="field">
+            <label for="f-title">Titre</label>
+            <input id="f-title" class="input invalid focus" type="text" value="Bel-Ami, ou les aventures d'un jeune ambitieux…" aria-invalid="true" aria-describedby="f-title-help f-title-error">
+            <small id="f-title-help" class="help">255 caractères maximum.</small>
+            <div id="f-title-error" class="err"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><span>Le titre ne doit pas dépasser 255 caractères.</span></div>
+          </div>
+          <div class="field"><label for="f-author">Auteur</label><input id="f-author" class="input" type="text" value="Guy de Maupassant"><small class="help">Prénom et nom, 255 caractères maximum.</small></div>
+          <div class="field"><label for="f-copies">Nombre d'exemplaires</label><div class="number"><span class="nb"><svg class="i"><use href="#i-minus"/></svg></span><input id="f-copies" class="input" type="text" value="2"><span class="nb"><svg class="i"><use href="#i-plus"/></svg></span></div><small class="help">Entre 1 et 1000.</small></div>
+        </form>
+        <div class="d-footer">
+          <button class="btn btn-text" type="button">Annuler</button>
+          <button class="btn btn-primary" type="submit"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

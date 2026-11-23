@@ -15,6 +15,8 @@ import mockUsers from '../../../mocks/auth/users.json';
 import validationFailed from '../../../mocks/auth/validation-failed.json';
 import { CurrentUser, Role } from '../auth/current-user.model';
 import { FieldError, ProblemDetail } from '../http/problem-detail';
+import { MockCatalogue } from './mock-catalogue';
+import { problem } from './mock-problem';
 
 /** Utilisateur fictif des jeux de données (mot de passe fictif, jamais un vrai secret). */
 interface MockUser {
@@ -47,12 +49,23 @@ const EMAIL_MAX_LENGTH = 254;
 @Injectable()
 export class MockApiInterceptor implements HttpInterceptor {
   private readonly users = mockUsers as MockUser[];
+  private readonly catalogue = new MockCatalogue();
   private session: CurrentUser | null = null;
 
   private readonly endpoints: MockEndpoint[] = [
     { method: 'POST', path: '/api/v1/auth/login', handle: (req) => this.login(req) },
     { method: 'GET', path: '/api/v1/auth/me', handle: () => this.me() },
     { method: 'POST', path: '/api/v1/auth/logout', handle: () => this.logout() },
+    {
+      method: 'GET',
+      path: '/api/v1/books',
+      handle: (req) => this.withSession((user) => this.catalogue.search(req, user.roles)),
+    },
+    {
+      method: 'POST',
+      path: '/api/v1/books',
+      handle: (req) => this.withSession((user) => this.catalogue.register(req, user.roles)),
+    },
   ];
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -104,6 +117,15 @@ export class MockApiInterceptor implements HttpInterceptor {
     return new HttpResponse({ status: 200, body: this.session, url: req.url });
   }
 
+  /** 401 sans session valide ; sinon délègue avec l'utilisateur connecté. */
+  private withSession(handle: (user: CurrentUser) => MockResult): MockResult {
+    if (this.session === null || Date.parse(this.session.expiresAt) <= Date.now()) {
+      this.session = null;
+      return problem(unauthenticated as ProblemDetail);
+    }
+    return handle(this.session);
+  }
+
   private me(): MockResult {
     if (this.session === null || Date.parse(this.session.expiresAt) <= Date.now()) {
       this.session = null;
@@ -116,20 +138,4 @@ export class MockApiInterceptor implements HttpInterceptor {
     this.session = null;
     return new HttpResponse({ status: 204, body: null });
   }
-}
-
-function problem(body: ProblemDetail): HttpErrorResponse {
-  const status = body.status ?? 500;
-  return new HttpErrorResponse({ status, statusText: statusText(status), error: body });
-}
-
-function statusText(status: number): string {
-  const texts: Record<number, string> = {
-    400: 'Bad Request',
-    401: 'Unauthorized',
-    403: 'Forbidden',
-    404: 'Not Found',
-    409: 'Conflict',
-  };
-  return texts[status] ?? 'Error';
 }

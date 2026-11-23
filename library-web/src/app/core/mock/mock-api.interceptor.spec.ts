@@ -110,8 +110,8 @@ describe('MockApiInterceptor', () => {
   });
 
   it('laisse passer vers la vraie API un endpoint absent des jeux de données', () => {
-    void firstValueFrom(http.get('/api/v1/books'));
+    void firstValueFrom(http.get('/api/v1/loans'));
 
-    httpTesting.expectOne('/api/v1/books').flush([]);
+    httpTesting.expectOne('/api/v1/loans').flush([]);
   });
 });

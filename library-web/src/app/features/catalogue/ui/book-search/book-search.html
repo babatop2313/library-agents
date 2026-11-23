@@ -1,0 +1,27 @@
+<label for="catalogue-search" class="d-block fw-medium mb-2">Rechercher par titre ou auteur</label>
+<p-iconfield>
+  <p-inputicon class="pi pi-search" />
+  <input
+    #field
+    pInputText
+    id="catalogue-search"
+    type="search"
+    class="w-100 search-input"
+    placeholder="Ex. : Camus"
+    autocomplete="off"
+    [attr.maxlength]="maxLength"
+    [value]="text()"
+    (input)="onInput($event)"
+    (keydown.enter)="submitNow()"
+  />
+  @if (text() !== '') {
+    <p-button
+      icon="pi pi-times"
+      severity="secondary"
+      [text]="true"
+      ariaLabel="Effacer la recherche"
+      class="search-clear"
+      (onClick)="clear()"
+    />
+  }
+</p-iconfield>

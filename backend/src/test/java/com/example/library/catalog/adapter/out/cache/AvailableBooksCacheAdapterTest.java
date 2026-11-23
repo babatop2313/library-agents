@@ -20,6 +20,8 @@ import com.example.library.catalog.application.fake.InMemoryBookRepository;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.SearchText;
+import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -91,7 +93,7 @@ class AvailableBooksCacheAdapterTest {
             return null;
         });
         database = new InMemoryBookRepository();
-        adapter = new AvailableBooksCacheAdapter(database, database, redis, TTL);
+        adapter = new AvailableBooksCacheAdapter(database, database, database, redis, TTL);
     }
 
     @AfterEach
@@ -300,7 +302,7 @@ class AvailableBooksCacheAdapterTest {
     @Test
     void loadAvailableBooks_quandCleExpiree_alorsRelueEnBaseEtNouveauTtl() {
         // Given : un TTL très court pour ce test
-        adapter = new AvailableBooksCacheAdapter(database, database, redis, Duration.ofSeconds(1));
+        adapter = new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ofSeconds(1));
         givenBooksInDatabase(2);
         adapter.loadAvailableBooks(10);
         await().atMost(Duration.ofSeconds(10)).until(() -> !Boolean.TRUE.equals(redis.hasKey(KEY)));
@@ -317,7 +319,7 @@ class AvailableBooksCacheAdapterTest {
         // Given : un port de base simulé (le fake refuserait une limite hors 1 à 20)
         LoadAvailableBooksPort persistence = mock(LoadAvailableBooksPort.class);
         when(persistence.loadAvailableBooks(anyInt())).thenReturn(List.of(book(1)));
-        AvailableBooksCacheAdapter outOfContract = new AvailableBooksCacheAdapter(persistence, database, redis, TTL);
+        AvailableBooksCacheAdapter outOfContract = new AvailableBooksCacheAdapter(persistence, database, database, redis, TTL);
         // When
         List<Book> tooBig = outOfContract.loadAvailableBooks(25);
         List<Book> zero = outOfContract.loadAvailableBooks(0);
@@ -332,11 +334,11 @@ class AvailableBooksCacheAdapterTest {
     @Test
     void constructeur_quandTtlNulOuNegatif_alorsIllegalStateException() {
         // Given / When / Then : RC-07
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, redis, Duration.ZERO))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ZERO))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, redis, Duration.ofSeconds(-1)))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ofSeconds(-1)))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, redis, null))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -423,5 +425,167 @@ class AvailableBooksCacheAdapterTest {
         assertThat(stats).isNotNull();
         assertThat(stats.stringPropertyNames()).contains("cmdstat_get", "cmdstat_set", "cmdstat_del")
                 .doesNotContain("cmdstat_keys", "cmdstat_scan");
+    }
+
+    // ------------------------------------------------- pages du catalogue (RM-CAT-24)
+
+    private List<Book> page(String q, int page, int size) {
+        return adapter.loadAvailableBooksPage(SearchText.of(q), new CatalogPageRequest(page, size));
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandTeteDeListeSansRecherche_alorsServieParLeCacheSansLireLaPageEnBase() {
+        // Given : 30 livres, cache vide
+        givenBooksInDatabase(30);
+        // When
+        List<Book> result = page(null, 0, 10);
+        // Then : la tête (20 livres) est lue une fois pour remplir le cache, jamais la page elle-même
+        assertThat(result).extracting(Book::getTitle).first().isEqualTo("Livre 00");
+        assertThat(result).hasSize(10);
+        assertThat(database.loadPageCalls()).isZero();
+        assertThat(database.loadAvailableCalls()).isEqualTo(1);
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandTeteDeListeDejaEnCache_alorsBaseNonRelueEtContenuIdentiqueALaBase() {
+        // Given : liste en cache
+        givenBooksInDatabase(30);
+        adapter.loadAvailableBooks(20);
+        // When
+        List<Book> first = page(null, 0, 10);
+        List<Book> second = page(null, 1, 10);
+        // Then : identique au résultat de la base, aucun appel base supplémentaire pour la tête
+        assertThat(database.loadAvailableCalls()).isEqualTo(1);
+        assertThat(ids(first)).isEqualTo(
+                ids(database.loadAvailableBooksPage(SearchText.NONE, new CatalogPageRequest(0, 10))));
+        assertThat(ids(second)).isEqualTo(
+                ids(database.loadAvailableBooksPage(SearchText.NONE, new CatalogPageRequest(1, 10))));
+    }
+
+    static Stream<Arguments> pagesWithinCachedHead() {
+        return Stream.of(
+                Arguments.of(0, 1), Arguments.of(0, 7), Arguments.of(0, 10), Arguments.of(1, 10),
+                Arguments.of(0, 20), Arguments.of(1, 5), Arguments.of(3, 5), Arguments.of(1, 7));
+    }
+
+    @ParameterizedTest
+    @MethodSource("pagesWithinCachedHead")
+    void loadAvailableBooksPage_quandPageDansLesVingtPremiers_alorsIdentiqueALaBaseEtServieParLeCache(
+            int page, int size) {
+        // Given
+        givenBooksInDatabase(30);
+        // When
+        List<Book> result = page(null, page, size);
+        // Then : page * size + size <= 20, la page n'est pas lue en base (l'appel de comparaison est le seul)
+        assertThat(database.loadPageCalls()).isZero();
+        assertThat(ids(result)).isEqualTo(
+                ids(database.loadAvailableBooksPage(SearchText.NONE, new CatalogPageRequest(page, size))));
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandPeuDeLivres_alorsListeVideOuPartielleSansErreur() {
+        // Given : seulement 5 livres
+        givenBooksInDatabase(5);
+        // When / Then
+        assertThat(page(null, 0, 10)).hasSize(5);
+        assertThat(page(null, 1, 10)).isEmpty();
+        assertThat(page(null, 1, 5)).isEmpty();
+        assertThat(page(null, 0, 3)).hasSize(3);
+        assertThat(page(null, 1, 3)).hasSize(2);
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandPageProfondeAuDelaDeVingt_alorsBaseLueEtCacheNiLuNiEcrit() {
+        // Given : 30 livres, cache vide
+        givenBooksInDatabase(30);
+        // When
+        List<Book> result = page(null, 2, 10);
+        // Then : RM-CAT-24
+        assertThat(result).hasSize(10);
+        assertThat(database.loadPageCalls()).isEqualTo(1);
+        assertThat(database.loadAvailableCalls()).isZero();
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandTailleCinquante_alorsBaseLue() {
+        // Given
+        givenBooksInDatabase(30);
+        // When
+        List<Book> result = page(null, 0, 50);
+        // Then
+        assertThat(result).hasSize(30);
+        assertThat(database.loadPageCalls()).isEqualTo(1);
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandPageUneTailleVingt_alorsBaseLue() {
+        // Given : page 1, taille 20 = livres 21 à 40
+        givenBooksInDatabase(30);
+        // When
+        List<Book> result = page(null, 1, 20);
+        // Then
+        assertThat(result).hasSize(10);
+        assertThat(database.loadPageCalls()).isEqualTo(1);
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandRecherche_alorsBaseLueEtCacheInchange() {
+        // Given : liste en cache
+        givenBooksInDatabase(30);
+        adapter.loadAvailableBooks(20);
+        String before = redis.opsForValue().get(KEY);
+        // When
+        List<Book> result = page("livre 0", 0, 10);
+        // Then : RM-CAT-24, lu en base avec le filtre, valeur de la clé inchangée
+        assertThat(result).hasSize(10);
+        assertThat(database.loadPageCalls()).isEqualTo(1);
+        assertThat(database.lastText().value()).isEqualTo("livre 0");
+        assertThat(redis.opsForValue().get(KEY)).isEqualTo(before);
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandRechercheSansCache_alorsCleNonCreee() {
+        // Given
+        givenBooksInDatabase(5);
+        // When
+        page("auteur", 0, 10);
+        // Then
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandPageGrandeAvecEntiersLimites_alorsPasDeDebordementEtBaseLue() {
+        // Given
+        givenBooksInDatabase(3);
+        // When
+        List<Book> result = page(null, Integer.MAX_VALUE, 50);
+        // Then : endExclusive calculé en long
+        assertThat(result).isEmpty();
+        assertThat(database.loadPageCalls()).isEqualTo(1);
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandResultatServiParLeCache_alorsListeImmuable() {
+        // Given
+        givenBooksInDatabase(3);
+        // When
+        List<Book> result = page(null, 0, 10);
+        // Then
+        assertThatThrownBy(() -> result.add(book(99))).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void loadAvailableBooksPage_quandEnregistrementPuisNouvelleLecture_alorsLeNouveauLivreApparait() {
+        // Given : cache rempli sans le livre 99
+        givenBooksInDatabase(3);
+        assertThat(page(null, 0, 10)).hasSize(3);
+        // When : RM-CAT-25, enregistrement hors transaction (invalidation immédiate) puis lecture
+        adapter.save(book(99));
+        List<Book> after = page(null, 0, 10);
+        // Then
+        assertThat(after).extracting(Book::getTitle).contains("Livre 99");
     }
 }

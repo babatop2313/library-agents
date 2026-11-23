@@ -7,18 +7,23 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.example.library.catalog.application.port.out.CheckIsbnRegisteredPort;
+import com.example.library.catalog.application.port.out.CountAvailableBooksPort;
+import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.application.port.out.LoadBookByIsbnPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.AvailableBooksLimit;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
+import com.example.library.catalog.domain.model.SearchText;
 import com.example.library.catalog.domain.service.AvailableBooksSelection;
 
 /** Fake en memoire des ports de sortie du catalogue. */
 public class InMemoryBookRepository
-        implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort {
+        implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort,
+        LoadAvailableBooksPagePort, CountAvailableBooksPort {
 
     private final Map<Isbn, Book> books = new LinkedHashMap<>();
     private final AvailableBooksSelection selection = new AvailableBooksSelection();
@@ -27,6 +32,10 @@ public class InMemoryBookRepository
     private int loadByIsbnCalls;
     private int loadAvailableCalls;
     private Integer lastMaxResults;
+    private int loadPageCalls;
+    private int countCalls;
+    private CatalogPageRequest lastPageRequest;
+    private SearchText lastText;
 
     @Override
     public boolean isRegistered(Isbn isbn) {
@@ -55,6 +64,27 @@ public class InMemoryBookRepository
         loadAvailableCalls++;
         lastMaxResults = maxResults;
         return selection.select(new ArrayList<>(books.values()), new AvailableBooksLimit(maxResults));
+    }
+
+    /** Sémantique de référence : disponibles, filtre {@link SearchText#matches(Book)}, ordre du catalogue, fenêtre. */
+    @Override
+    public List<Book> loadAvailableBooksPage(SearchText text, CatalogPageRequest pageRequest) {
+        loadPageCalls++;
+        lastText = text;
+        lastPageRequest = pageRequest;
+        return books.values().stream()
+                .filter(Book::isAvailable)
+                .filter(text::matches)
+                .sorted(AvailableBooksSelection.CATALOG_ORDER)
+                .skip(pageRequest.offset())
+                .limit(pageRequest.size())
+                .toList();
+    }
+
+    @Override
+    public long countAvailableBooks(SearchText text) {
+        countCalls++;
+        return books.values().stream().filter(Book::isAvailable).filter(text::matches).count();
     }
 
     /** Pre-remplit le catalogue sans passer par les ports. */
@@ -88,5 +118,21 @@ public class InMemoryBookRepository
 
     public Integer lastMaxResults() {
         return lastMaxResults;
+    }
+
+    public int loadPageCalls() {
+        return loadPageCalls;
+    }
+
+    public int countCalls() {
+        return countCalls;
+    }
+
+    public CatalogPageRequest lastPageRequest() {
+        return lastPageRequest;
+    }
+
+    public SearchText lastText() {
+        return lastText;
     }
 }

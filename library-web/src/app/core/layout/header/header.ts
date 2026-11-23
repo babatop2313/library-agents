@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { finalize } from 'rxjs';
@@ -9,7 +9,7 @@ import { roleLabel, roleSeverity } from '../../auth/role-label';
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, ButtonModule, TagModule],
+  imports: [RouterLink, RouterLinkActive, ButtonModule, TagModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './header.html',
   styleUrl: './header.scss',

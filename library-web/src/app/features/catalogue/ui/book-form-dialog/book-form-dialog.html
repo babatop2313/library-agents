@@ -1,0 +1,157 @@
+<p-dialog
+  header="Ajouter un livre"
+  closeAriaLabel="Fermer"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!submitting()"
+  [closeOnEscape]="!submitting()"
+  [dismissableMask]="false"
+  [style]="{ width: '32rem' }"
+  [breakpoints]="{ '575px': 'calc(100vw - 32px)' }"
+>
+  <form
+    id="book-form"
+    class="d-flex flex-column gap-4"
+    novalidate
+    [formGroup]="form"
+    [attr.aria-busy]="submitting()"
+    (ngSubmit)="submit()"
+    (keydown.enter)="onEnter($event)"
+  >
+    <p class="form-note m-0">Tous les champs sont obligatoires.</p>
+
+    @if (general()) {
+      <p-message #generalMessage severity="error" role="alert" tabindex="-1">
+        <div>
+          <strong>{{ generalTitle }}</strong>
+          @for (message of generalMessages(); track $index) {
+            <div>{{ message }}</div>
+          }
+        </div>
+      </p-message>
+    }
+
+    <div>
+      <label for="book-isbn" class="d-block fw-medium mb-2">ISBN</label>
+      <input
+        pInputText
+        id="book-isbn"
+        type="text"
+        formControlName="isbn"
+        class="w-100"
+        autocomplete="off"
+        aria-required="true"
+        [pAutoFocus]="true"
+        [readOnly]="submitting()"
+        [invalid]="error('isbn') !== null"
+        [attr.aria-invalid]="error('isbn') !== null ? 'true' : null"
+        [attr.aria-describedby]="describedBy('isbn')"
+      />
+      <small id="book-isbn-help" class="d-block mt-1 form-help">
+        13 chiffres ; les tirets et les espaces sont acceptés (ex. : 978-2-07-036822-8).
+      </small>
+      @if (error('isbn'); as message) {
+        <p-message id="book-isbn-error" severity="error" variant="simple" size="small">
+          {{ message }}
+        </p-message>
+      }
+    </div>
+
+    <div>
+      <label for="book-title" class="d-block fw-medium mb-2">Titre</label>
+      <input
+        pInputText
+        id="book-title"
+        type="text"
+        formControlName="title"
+        class="w-100"
+        autocomplete="off"
+        aria-required="true"
+        [readOnly]="submitting()"
+        [invalid]="error('title') !== null"
+        [attr.aria-invalid]="error('title') !== null ? 'true' : null"
+        [attr.aria-describedby]="describedBy('title')"
+      />
+      <small id="book-title-help" class="d-block mt-1 form-help">255 caractères maximum.</small>
+      @if (error('title'); as message) {
+        <p-message id="book-title-error" severity="error" variant="simple" size="small">
+          {{ message }}
+        </p-message>
+      }
+    </div>
+
+    <div>
+      <label for="book-author" class="d-block fw-medium mb-2">Auteur</label>
+      <input
+        pInputText
+        id="book-author"
+        type="text"
+        formControlName="author"
+        class="w-100"
+        autocomplete="off"
+        aria-required="true"
+        [readOnly]="submitting()"
+        [invalid]="error('author') !== null"
+        [attr.aria-invalid]="error('author') !== null ? 'true' : null"
+        [attr.aria-describedby]="describedBy('author')"
+      />
+      <small id="book-author-help" class="d-block mt-1 form-help">
+        Prénom et nom, 255 caractères maximum.
+      </small>
+      @if (error('author'); as message) {
+        <p-message id="book-author-error" severity="error" variant="simple" size="small">
+          {{ message }}
+        </p-message>
+      }
+    </div>
+
+    <div>
+      <label for="book-copies" class="d-block fw-medium mb-2">Nombre d'exemplaires</label>
+      <p-inputnumber
+        inputId="book-copies"
+        formControlName="copies"
+        styleClass="copies-field"
+        buttonLayout="horizontal"
+        incrementButtonIcon="pi pi-plus"
+        decrementButtonIcon="pi pi-minus"
+        [min]="copiesMin"
+        [max]="copiesMax"
+        [useGrouping]="false"
+        [showButtons]="true"
+        [readonly]="submitting()"
+        [invalid]="error('copies') !== null"
+        [ariaRequired]="true"
+        [ariaDescribedBy]="describedBy('copies')"
+      />
+      <small id="book-copies-help" class="d-block mt-1 form-help">Entre 1 et 1000.</small>
+      @if (error('copies'); as message) {
+        <p-message id="book-copies-error" severity="error" variant="simple" size="small">
+          {{ message }}
+        </p-message>
+      }
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <div class="footer-actions">
+      <p-button
+        label="Annuler"
+        severity="secondary"
+        [text]="true"
+        [disabled]="submitting()"
+        (onClick)="close()"
+      />
+      <p-button
+        #saveButton
+        type="button"
+        label="Enregistrer"
+        icon="pi pi-check"
+        [loading]="submitting()"
+        [disabled]="submitting()"
+        (onClick)="submit()"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

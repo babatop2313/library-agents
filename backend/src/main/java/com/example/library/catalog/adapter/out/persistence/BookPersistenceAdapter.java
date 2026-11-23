@@ -4,19 +4,24 @@ import java.util.List;
 import java.util.Optional;
 
 import com.example.library.catalog.application.port.out.CheckIsbnRegisteredPort;
+import com.example.library.catalog.application.port.out.CountAvailableBooksPort;
+import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.application.port.out.LoadBookByIsbnPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
+import com.example.library.catalog.domain.model.SearchText;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 @Component("bookPersistenceAdapter")
 class BookPersistenceAdapter
-        implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort {
+        implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort,
+        LoadAvailableBooksPagePort, CountAvailableBooksPort {
 
     static final String ISBN_UNIQUE_CONSTRAINT = "uk_book_isbn";
 
@@ -41,6 +46,22 @@ class BookPersistenceAdapter
     @Override
     public List<Book> loadAvailableBooks(int maxResults) {
         return repository.findAvailableOrderedByTitle(maxResults).stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public List<Book> loadAvailableBooksPage(SearchText text, CatalogPageRequest pageRequest) {
+        List<BookJpaEntity> entities = text.isEmpty()
+                ? repository.findAvailablePage(pageRequest.size(), pageRequest.offset())
+                : repository.searchAvailablePage(LikePatterns.containsPattern(text.value()),
+                        pageRequest.size(), pageRequest.offset());
+        return entities.stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public long countAvailableBooks(SearchText text) {
+        return text.isEmpty()
+                ? repository.countAvailable()
+                : repository.countAvailableMatching(LikePatterns.containsPattern(text.value()));
     }
 
     @Override

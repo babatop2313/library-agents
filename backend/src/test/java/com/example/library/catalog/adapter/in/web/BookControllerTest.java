@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.library.catalog.application.port.in.RegisterBookCommand;
 import com.example.library.catalog.application.port.in.RegisterBookUseCase;
+import com.example.library.catalog.application.port.in.SearchAvailableBooksUseCase;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
 import com.example.library.catalog.domain.model.Isbn;
@@ -47,6 +48,10 @@ class BookControllerTest {
 
     @MockitoBean
     private RegisterBookUseCase registerBookUseCase;
+
+    /** Requis par le contrôleur (GET) ; non utilisé par ces tests de POST. */
+    @MockitoBean
+    private SearchAvailableBooksUseCase searchAvailableBooksUseCase;
 
     private static RequestPostProcessor librarian() {
         return jwt().authorities(new SimpleGrantedAuthority("ROLE_LIBRARIAN"));

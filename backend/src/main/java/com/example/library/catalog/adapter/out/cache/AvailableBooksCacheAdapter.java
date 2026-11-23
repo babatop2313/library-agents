@@ -3,10 +3,13 @@ package com.example.library.catalog.adapter.out.cache;
 import java.time.Duration;
 import java.util.List;
 
+import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.model.AvailableBooksLimit;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.CatalogPageRequest;
+import com.example.library.catalog.domain.model.SearchText;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,10 +27,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * la lecture tronque à {@code maxResults} sans re-trier. Le cache n'est jamais la source de vérité : toute erreur
  * de cache se traduit par un repli sur la base et un WARN, sans valeur ni donnée personnelle (RC-11, RC-18).
  * La clé est supprimée après le commit d'un enregistrement (RC-13).
+ *
+ * <p>RM-CAT-42 : ce décorateur implémente tout port d'écriture annoté {@code @AffectsAvailableBooks}
+ * (aujourd'hui {@link SaveBookPort}) et appelle {@code evictAfterCommit()} après avoir délégué ; les autres modules
+ * (ex. {@code loan}) passent par {@code catalog.api}, jamais par le cache. Les pages sans recherche qui tiennent dans
+ * la tête de liste sont servies par la même clé ; le total n'est jamais mis en cache.
  */
 @Component
 @Primary
-class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort {
+class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailableBooksPagePort, SaveBookPort {
 
     static final String KEY = "library:catalog:available-books:v1";
     static final int CACHED_SIZE = AvailableBooksLimit.MAX;
@@ -55,6 +63,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
     }
 
     private final LoadAvailableBooksPort persistentLoad;
+    private final LoadAvailableBooksPagePort persistentPageLoad;
     private final SaveBookPort persistentSave;
     private final StringRedisTemplate redis;
     private final Duration ttl;
@@ -62,6 +71,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
 
     AvailableBooksCacheAdapter(
             @Qualifier("bookPersistenceAdapter") LoadAvailableBooksPort persistentLoad,
+            @Qualifier("bookPersistenceAdapter") LoadAvailableBooksPagePort persistentPageLoad,
             @Qualifier("bookPersistenceAdapter") SaveBookPort persistentSave,
             StringRedisTemplate redis,
             @Value("${app.cache.ttl.default}") Duration ttl) {
@@ -69,6 +79,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
             throw new IllegalStateException("app.cache.ttl.default doit être une durée strictement positive");
         }
         this.persistentLoad = persistentLoad;
+        this.persistentPageLoad = persistentPageLoad;
         this.persistentSave = persistentSave;
         this.redis = redis;
         this.ttl = ttl;
@@ -80,7 +91,28 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
             // hors contrat du port : sémantique de la base, cache non touché
             return persistentLoad.loadAvailableBooks(maxResults);
         }
-        List<Book> books = switch (readCache()) {
+        List<Book> books = cachedHead();
+        return List.copyOf(books.subList(0, Math.min(maxResults, books.size())));
+    }
+
+    /**
+     * Page du catalogue : la tête de liste (clé {@code v1}) sert uniquement les pages sans recherche qui tiennent
+     * dans les {@value #CACHED_SIZE} premiers livres ; sinon base de données, cache ni lu ni écrit (RM-CAT-24).
+     */
+    @Override
+    public List<Book> loadAvailableBooksPage(SearchText text, CatalogPageRequest pageRequest) {
+        if (!text.isEmpty() || pageRequest.endExclusive() > CACHED_SIZE) {
+            return persistentPageLoad.loadAvailableBooksPage(text, pageRequest);
+        }
+        List<Book> books = cachedHead();
+        int from = (int) Math.min(pageRequest.offset(), books.size());
+        int to = (int) Math.min(pageRequest.endExclusive(), books.size());
+        return List.copyOf(books.subList(from, to));
+    }
+
+    /** Les {@value #CACHED_SIZE} premiers livres disponibles : cache (Hit), ou base (Miss avec écriture, Unavailable sans). */
+    private List<Book> cachedHead() {
+        return switch (readCache()) {
             case CacheRead.Hit hit -> hit.books();
             case CacheRead.Miss miss -> {
                 List<Book> fromDatabase = persistentLoad.loadAvailableBooks(CACHED_SIZE);
@@ -89,12 +121,19 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, SaveBookPort
             }
             case CacheRead.Unavailable unavailable -> persistentLoad.loadAvailableBooks(CACHED_SIZE);
         };
-        return List.copyOf(books.subList(0, Math.min(maxResults, books.size())));
     }
 
     @Override
     public void save(Book book) {
         persistentSave.save(book);
+        evictAfterCommit();
+    }
+
+    /**
+     * Point d'extension RM-CAT-42 : toute écriture qui modifie les livres disponibles supprime la clé après le commit
+     * (immédiatement hors transaction ; rien en cas de rollback ; une erreur Redis n'est jamais propagée).
+     */
+    private void evictAfterCommit() {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
