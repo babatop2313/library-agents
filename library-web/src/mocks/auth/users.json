@@ -1,0 +1,14 @@
+[
+  {
+    "userId": "00000000-0000-4000-8000-000000000001",
+    "email": "bibliothecaire@exemple.test",
+    "password": "mot-de-passe-fictif",
+    "roles": ["LIBRARIAN"]
+  },
+  {
+    "userId": "00000000-0000-4000-8000-000000000002",
+    "email": "membre@exemple.test",
+    "password": "mot-de-passe-fictif",
+    "roles": ["MEMBER"]
+  }
+]
