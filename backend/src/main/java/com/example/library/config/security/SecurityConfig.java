@@ -5,14 +5,21 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -32,23 +39,62 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableMethodSecurity
+@EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
-    static final String ROLES_CLAIM = "roles";
+    static final String ROLES_CLAIM = JwtClaims.ROLES;
 
+    /**
+     * Jeton lu dans l'en-tête Authorization ou, à défaut, dans le cookie (RM-AUTH-24). CSRF exigé seulement pour
+     * une requête modifiante authentifiée par cookie (RM-AUTH-25) ; la connexion en est dispensée (risque de
+     * login CSRF accepté, atténué par SameSite=Strict). 401 et 403 en ProblemDetail (RM-AUTH-28).
+     */
     @Bean
-    SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain apiSecurity(HttpSecurity http, JwtProperties props, Environment environment)
+            throws Exception {
+        ProblemDetailAuthenticationEntryPoint entryPoint = new ProblemDetailAuthenticationEntryPoint();
+        ProblemDetailAccessDeniedHandler accessDeniedHandler = new ProblemDetailAccessDeniedHandler();
+        boolean local = environment.acceptsProfiles(Profiles.of("local"));
+
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokenRepository())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                .requireCsrfProtectionMatcher(new CookieAuthenticatedRequestMatcher(props.cookieName()))
+                .ignoringRequestMatchers(
+                    PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/v1/auth/login")))
+            .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers("/dev/token").permitAll()   // n'existe qu'avec le profil "local"
-                .requestMatchers(HttpMethod.POST, "/api/v1/books").hasRole("LIBRARIAN")
-                .anyRequest().authenticated())
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(entryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
+            .authorizeHttpRequests(auth -> {
+                auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/logout").permitAll();
+                if (local) {
+                    auth.requestMatchers(HttpMethod.POST, "/dev/token").permitAll();   // n'existe qu'avec le profil "local" (RM-AUTH-12)
+                }
+                auth.requestMatchers(HttpMethod.POST, "/api/v1/books").hasRole("LIBRARIAN")
+                    .anyRequest().authenticated();
+            })
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(new CsrfAwareBearerTokenResolver(
+                    new CookieOrHeaderBearerTokenResolver(props.cookieName())))
+                .authenticationEntryPoint(entryPoint)
+                .accessDeniedHandler(accessDeniedHandler)
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
+    }
+
+    /**
+     * Cookie XSRF-TOKEN lisible par JavaScript (le frontend le recopie dans X-XSRF-TOKEN), mais Secure et
+     * SameSite=Strict comme le cookie du jeton. Les navigateurs acceptent Secure sur http://localhost.
+     */
+    static CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Strict"));
+        return repository;
     }
 
     @Bean
