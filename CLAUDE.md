@@ -7,6 +7,7 @@
 - Application : gestion d'une bibliothèque qui prête des livres à ses membres (projet bac à sable de la Claude Factory).
 - Modules prévus : `catalog` (livres, exemplaires) et `loan` (emprunts).
 - Langue du code : anglais. Langue des commentaires métier, specs et messages de commit : français.
+- Langue des échanges avec Claude : français.
 
 ## Règles métier de référence
 | Code | Règle |
