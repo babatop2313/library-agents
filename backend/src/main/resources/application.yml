@@ -3,8 +3,8 @@ spring:
     name: library
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/library}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USER}          # secret : aucune valeur par défaut, démarrage refusé si absent
+    password: ${DB_PASSWORD}      # secret : aucune valeur par défaut, démarrage refusé si absent
   jpa:
     open-in-view: false
     hibernate:
@@ -50,7 +50,7 @@ spring:
 app:
   security:
     jwt:
-      secret: ${JWT_SECRET:pour_le_test_on_fait_ce_qu_on_ose_pas_faire_en_vrai}       # au moins 32 caractères, jamais commité
+      secret: ${JWT_SECRET}       # secret : aucune valeur par défaut, démarrage refusé si absent ; au moins 32 octets
       ttl: ${JWT_TTL:PT1H}        # durée du jeton et du cookie (ISO-8601)
       cookie-name: ACCESS_TOKEN
     bcrypt:
