@@ -1,0 +1,27 @@
+{
+  "designSystem": { "status": "validé", "source": "factory", "link": "" },
+  "screens": [
+    {
+      "id": "catalogue-list",
+      "title": "Catalogue",
+      "feature": "catalogue",
+      "status": "intégré",
+      "source": "factory",
+      "link": "",
+      "spec": "screens/catalogue-list.md",
+      "mockup": "mockups/catalogue-list.html",
+      "updated": "2026-11-23"
+    },
+    {
+      "id": "catalogue-register-dialog",
+      "title": "Ajouter un livre",
+      "feature": "catalogue",
+      "status": "intégré",
+      "source": "factory",
+      "link": "",
+      "spec": "screens/catalogue-register-dialog.md",
+      "mockup": "mockups/catalogue-register-dialog.html",
+      "updated": "2026-11-23"
+    }
+  ]
+}

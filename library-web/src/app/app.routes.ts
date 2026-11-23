@@ -13,6 +13,12 @@ export const routes: Routes = [
     canActivateChild: [authGuard],
     children: [
       { path: '', loadComponent: () => import('./features/home/pages/home').then((m) => m.Home) },
+      {
+        path: 'catalogue',
+        title: 'Catalogue',
+        loadChildren: () =>
+          import('./features/catalogue/catalogue.routes').then((m) => m.CATALOGUE_ROUTES),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

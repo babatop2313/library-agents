@@ -1,0 +1,122 @@
+<p-table
+  [value]="rows()"
+  [lazy]="true"
+  [loading]="status() === 'reloading'"
+  [attr.aria-busy]="status() === 'skeleton' || status() === 'reloading'"
+>
+  <ng-template #colgroup>
+    <caption class="visually-hidden">
+      Livres disponibles
+    </caption>
+  </ng-template>
+  <ng-template #header>
+    <tr>
+      <th scope="col">Titre</th>
+      <th scope="col" class="d-none d-md-table-cell">Auteur</th>
+      <th scope="col" class="d-none d-md-table-cell">ISBN</th>
+      <th scope="col" class="col-availability text-end">
+        <span class="d-none d-md-inline">Exemplaires disponibles</span>
+        <span class="d-md-none">Disponibles</span>
+      </th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-book>
+    <tr>
+      <td class="cell-title">
+        <span class="fw-medium">{{ book.title }}</span>
+        <span class="d-md-none cell-sub">{{ book.author }}</span>
+        <span class="d-md-none cell-sub cell-number">ISBN {{ book.isbn }}</span>
+      </td>
+      <td class="d-none d-md-table-cell">{{ book.author }}</td>
+      <td class="d-none d-md-table-cell cell-number">{{ book.isbn }}</td>
+      <td class="text-end cell-number">
+        <span aria-hidden="true">{{ book.availableCopies }} / {{ book.totalCopies }}</span>
+        <span class="visually-hidden">{{ availability(book) }}</span>
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #loadingbody>
+    <!-- PrimeNG ajoute aussi ce gabarit pendant un rechargement ([loading]) : lignes squelettes seulement au premier chargement. -->
+    @if (status() === 'skeleton') {
+      <tr>
+        <td><p-skeleton width="70%" height="1rem" /></td>
+        <td class="d-none d-md-table-cell"><p-skeleton width="60%" height="1rem" /></td>
+        <td class="d-none d-md-table-cell"><p-skeleton width="80%" height="1rem" /></td>
+        <td><p-skeleton width="40%" height="1rem" styleClass="ms-auto" /></td>
+      </tr>
+    }
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td colspan="4" class="empty-state">
+        @switch (status()) {
+          @case ('error') {
+            <span class="state-icon state-icon-error" aria-hidden="true">
+              <i class="pi pi-exclamation-triangle"></i>
+            </span>
+            <h2 class="state-title">Le catalogue n'a pas pu être chargé</h2>
+            <p class="state-text">Vérifiez votre connexion, puis réessayez.</p>
+            <p-button
+              label="Réessayer"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="retrying()"
+              (onClick)="retry.emit()"
+            />
+          }
+          @case ('forbidden') {
+            <span class="state-icon state-icon-error" aria-hidden="true">
+              <i class="pi pi-exclamation-triangle"></i>
+            </span>
+            <h2 class="state-title">
+              Vous n'avez pas les droits nécessaires pour consulter le catalogue
+            </h2>
+          }
+          @default {
+            @if (query() !== '') {
+              <span class="state-icon" aria-hidden="true"><i class="pi pi-search"></i></span>
+              <h2 class="state-title">Aucun livre ne correspond à "{{ query() }}"</h2>
+              <p class="state-text">
+                Vérifiez l'orthographe et les accents, ou essayez une partie du titre ou du nom de
+                l'auteur.
+              </p>
+              <p-button
+                label="Effacer la recherche"
+                icon="pi pi-times"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="clearSearch.emit()"
+              />
+            } @else {
+              <span class="state-icon" aria-hidden="true"><i class="pi pi-book"></i></span>
+              <h2 class="state-title">Aucun livre disponible pour le moment</h2>
+              <p class="state-text">
+                @if (canRegister()) {
+                  Utilisez « Ajouter un livre » pour enrichir le catalogue.
+                } @else {
+                  Revenez un peu plus tard : de nouveaux livres sont ajoutés régulièrement.
+                }
+              </p>
+            }
+          }
+        }
+      </td>
+    </tr>
+  </ng-template>
+</p-table>
+
+@if (showPaginator()) {
+  <p-paginator
+    styleClass="justify-content-center mt-3"
+    [first]="first()"
+    [rows]="size()"
+    [totalRecords]="totalElements()"
+    [rowsPerPageOptions]="pageSizes"
+    [pageLinkSize]="mobile() ? 3 : 5"
+    [showFirstLastIcon]="!mobile()"
+    [showCurrentPageReport]="!mobile()"
+    currentPageReportTemplate="{first} à {last} sur {totalRecords}"
+    (onPageChange)="onPage($event)"
+  />
+}

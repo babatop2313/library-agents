@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — catalogue-list (validé)</title>
+<style>
+  /* Jetons : thème Aura (PrimeNG 21), palette primaire violette (design system validé : primary = violet, color = {primary.600}). */
+  :root {
+    --p-primary-50: #f5f3ff; --p-primary-100: #ede9fe; --p-primary-600: #7c3aed; --p-primary-700: #6d28d9; --p-primary-800: #5b21b6;
+    --p-primary-color: #7c3aed; --p-primary-contrast-color: #ffffff;
+    --p-fuchsia-600: #c026d3;
+    --app-header-bg: linear-gradient(90deg, var(--p-primary-600) 0%, var(--p-fuchsia-600) 100%);
+    --p-surface-0: #ffffff; --p-surface-50: #f8fafc; --p-surface-100: #f1f5f9; --p-surface-200: #e2e8f0;
+    --p-surface-300: #cbd5e1; --p-surface-400: #94a3b8; --p-surface-500: #64748b; --p-surface-700: #334155;
+    --p-surface-900: #0f172a;
+    --p-text-color: #334155; --p-text-muted-color: #64748b;
+    --p-red-600: #dc2626; --p-red-50: #fef2f2;
+    --p-sky-100: #e0f2fe; --p-sky-700: #0369a1; --p-orange-100: #ffedd5; --p-orange-700: #c2410c;
+    --radius-md: 6px; --radius-xl: 12px;
+    --app-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--app-font); color: var(--p-text-color); background: #e9edf2; font-size: 16px; line-height: 1.5; }
+  .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  /* Cadre de la planche */
+  .board { max-width: 1240px; margin: 0 auto; padding: 32px 24px 64px; }
+  .board > h1 { font-size: 22px; margin: 0 0 4px; color: var(--p-surface-900); }
+  .board > p.lead { margin: 0 0 32px; color: var(--p-text-muted-color); font-size: 14px; }
+  .state-title { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--p-surface-500); margin: 40px 0 8px; }
+  .state-note { font-size: 14px; color: var(--p-text-muted-color); margin: 0 0 12px; max-width: 900px; }
+  .frame { background: var(--p-surface-0); border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,.12); overflow: hidden; }
+  .frame.mobile { width: 390px; }
+
+  /* En-tête (existant + lien Catalogue) */
+  .app-header { display: flex; align-items: center; gap: 24px; padding: 12px 24px; background: var(--app-header-bg); color: var(--p-primary-contrast-color); }
+  .app-title { display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-size: 1.25rem; font-weight: 600; }
+  .ico { display: inline-flex; align-items: center; justify-content: center; width: 1em; line-height: 1; }
+  /* Icônes : traits fins façon PrimeIcons (implémentation : classes pi pi-*). */
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; vertical-align: -0.125em; }
+  .nav a { color: inherit; text-decoration: none; font-weight: 500; padding: 6px 2px; border-bottom: 3px solid transparent; }
+  .nav a.active { border-bottom-color: #ffffff; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-md); }
+  .tag.lib { background: var(--p-sky-100); color: var(--p-sky-700); }
+  .tag.mem { background: var(--p-orange-100); color: var(--p-orange-700); }
+  .btn-header { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--p-surface-100); background: var(--p-surface-100); color: var(--p-surface-700); }
+
+  /* Page */
+  .page { padding: 24px 24px 32px; }
+  .title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+  .title-row h2 { margin: 0; font-size: 1.75rem; font-weight: 600; color: var(--p-surface-900); line-height: 1.2; }
+  .subtitle { margin: 4px 0 0; color: var(--p-text-muted-color); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 500; padding: 8px 14px; border-radius: var(--radius-md); border: 1px solid transparent; white-space: nowrap; cursor: pointer; }
+  .btn-primary { background: var(--p-primary-color); border-color: var(--p-primary-color); color: var(--p-primary-contrast-color); }
+  .btn-outlined { background: transparent; border-color: var(--p-surface-300); color: var(--p-surface-700); }
+  .btn-text { background: transparent; color: var(--p-primary-color); }
+  .focus { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+
+  .search { max-width: 28rem; margin-bottom: 16px; }
+  .search label { display: block; font-weight: 500; margin-bottom: 6px; }
+  .iconfield { position: relative; }
+  .iconfield .lead-ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--p-surface-400); }
+  .input { width: 100%; font: inherit; color: var(--p-text-color); padding: 8px 44px 8px 38px; border: 1px solid var(--p-surface-300); border-radius: var(--radius-md); background: var(--p-surface-0); height: 42px; }
+  .input.placeholder { color: var(--p-surface-500); }
+  .clear { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 38px; border: 0; background: transparent; color: var(--p-surface-500); border-radius: var(--radius-md); font-size: 16px; }
+  .counter { margin: 8px 0 0; font-size: 14px; color: var(--p-text-muted-color); }
+
+  /* p-table */
+  .table-wrap { border: 1px solid var(--p-surface-200); border-radius: var(--radius-md); overflow: hidden; position: relative; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 600; background: var(--p-surface-50); color: var(--p-surface-700); padding: 12px 16px; border-bottom: 1px solid var(--p-surface-200); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--p-surface-200); vertical-align: top; overflow-wrap: anywhere; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .isbn { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .c-title { font-weight: 500; color: var(--p-surface-900); }
+  .col-avail { width: 11rem; }
+  .sub { display: block; font-size: 14px; color: var(--p-text-muted-color); font-weight: 400; }
+  .skel { display: block; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--p-surface-200), var(--p-surface-100), var(--p-surface-200)); }
+
+  /* États dans le tableau */
+  .state { text-align: center; padding: 48px 24px; background: var(--p-surface-50); }
+  .state .big { font-size: 28px; width: 64px; height: 64px; border-radius: 50%; background: var(--p-primary-100); color: var(--p-primary-700); display: inline-flex; margin-bottom: 12px; }
+  .state .big.err { background: var(--p-red-50); color: var(--p-red-600); }
+  .state h3 { margin: 0 0 6px; font-size: 1.125rem; font-weight: 600; color: var(--p-surface-900); }
+  .state p { margin: 0 auto 16px; max-width: 32rem; color: var(--p-text-muted-color); }
+
+  /* p-paginator */
+  .paginator { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 16px 0 0; flex-wrap: wrap; font-size: 14px; }
+  .pg { min-width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--p-surface-500); border: 0; background: transparent; font: inherit; }
+  .pg.active { background: var(--p-primary-50); color: var(--p-primary-800); font-weight: 600; }
+  .pg.disabled { color: var(--p-surface-300); }
+  .report { color: var(--p-text-muted-color); margin: 0 12px; }
+  .select { display: inline-flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border: 1px solid var(--p-surface-300); border-radius: var(--radius-md); color: var(--p-text-color); margin-left: 8px; }
+
+  /* Mobile */
+  .mobile .app-header { padding: 12px 16px; gap: 16px; }
+  .mobile .app-title { font-size: 1.125rem; }
+  .mobile .btn-header { padding: 0; width: 40px; height: 40px; justify-content: center; }
+  .mobile .page { padding: 16px; }
+  .mobile .title-row h2 { font-size: 1.5rem; }
+  .mobile .search { max-width: none; }
+  .mobile td, .mobile th { padding: 10px 12px; }
+  .mobile .col-avail { width: 7.5rem; }
+  .row-mobile { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+  .caption { font-size: 13px; color: var(--p-surface-500); margin-top: 8px; }
+
+  /* Voile de rechargement */
+  .overlay { position: absolute; inset: 41px 0 0 0; background: rgba(255,255,255,.6); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--p-primary-color); }
+</style>
+</head>
+<body>
+<!-- Planche d'icônes interne (aucune ressource externe) : équivalents visuels des PrimeIcons. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M6.5 17A2.5 2.5 0 0 0 4 19.5 2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-sign-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-times" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-angle-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-angle-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-angle-double-left" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></symbol>
+    <symbol id="i-angle-double-right" viewBox="0 0 24 24"><path d="m13 17 5-5-5-5M6 17l5-5-5-5"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-spinner" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></symbol>
+  </defs>
+</svg>
+<div class="board">
+  <h1>catalogue-list — Catalogue</h1>
+  <p class="lead">Statut : validé (2026-11-23, remarques intégrées) · Maquette statique fidèle au thème Aura (PrimeNG 21) · Données fictives · Icônes vectorielles au trait (équivalents PrimeIcons <code>pi pi-*</code>), aucun emoji · Palette primaire violette, en-tête en dégradé violet → fuchsia.</p>
+
+  <!-- ===================================================== 1. Liste (LIBRARIAN) -->
+  <h2 class="state-title">1. État principal — liste, bibliothécaire, desktop (1200 px)</h2>
+  <p class="state-note">Lien « Catalogue » actif (souligné 3 px blanc, <code>aria-current="page"</code>). Bouton principal « Ajouter un livre » visible pour <code>LIBRARIAN</code>. Page 1 sur 3, 10 lignes, tri fixe titre puis ISBN (aucun en-tête cliquable). Focus clavier figuré sur le champ de recherche.</p>
+  <div class="frame">
+    <header class="app-header">
+      <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a class="active" href="#" aria-current="page">Catalogue</a></nav>
+      <div class="header-right">
+        <span>claire.martin@bibliotheque.fr</span>
+        <span class="tag lib">Bibliothécaire</span>
+        <span class="btn-header"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span>Se déconnecter</span>
+      </div>
+    </header>
+    <main class="page">
+      <div class="title-row">
+        <div>
+          <h2>Catalogue</h2>
+          <p class="subtitle">Livres disponibles à l'emprunt</p>
+        </div>
+        <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+      </div>
+
+      <div class="search">
+        <label for="s1">Rechercher par titre ou auteur</label>
+        <div class="iconfield">
+          <span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span>
+          <input id="s1" class="input placeholder focus" type="search" value="" placeholder="Ex. : Camus">
+        </div>
+        <p class="counter" aria-live="polite">25 livres disponibles</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Livres disponibles</caption>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="c-title">Bel-Ami</td><td>Guy de Maupassant</td><td class="isbn">9782253004226</td><td class="num"><span aria-hidden="true">2 / 3</span><span class="visually-hidden">2 disponibles sur 3</span></td></tr>
+            <tr><td class="c-title">Candide</td><td>Voltaire</td><td class="isbn">9782070408504</td><td class="num"><span aria-hidden="true">1 / 1</span><span class="visually-hidden">1 disponible sur 1</span></td></tr>
+            <tr><td class="c-title">Germinal</td><td>Émile Zola</td><td class="isbn">9782253002864</td><td class="num"><span aria-hidden="true">4 / 5</span><span class="visually-hidden">4 disponibles sur 5</span></td></tr>
+            <tr><td class="c-title">L'Étranger</td><td>Albert Camus</td><td class="isbn">9782070360024</td><td class="num"><span aria-hidden="true">2 / 3</span><span class="visually-hidden">2 disponibles sur 3</span></td></tr>
+            <tr><td class="c-title">La Peste</td><td>Albert Camus</td><td class="isbn">9782070360420</td><td class="num"><span aria-hidden="true">2 / 2</span><span class="visually-hidden">2 disponibles sur 2</span></td></tr>
+            <tr><td class="c-title">Le Comte de Monte-Cristo</td><td>Alexandre Dumas</td><td class="isbn">9782253098041</td><td class="num"><span aria-hidden="true">1 / 4</span><span class="visually-hidden">1 disponible sur 4</span></td></tr>
+            <tr><td class="c-title">Le Petit Prince</td><td>Antoine de Saint-Exupéry</td><td class="isbn">9782070612758</td><td class="num"><span aria-hidden="true">3 / 3</span><span class="visually-hidden">3 disponibles sur 3</span></td></tr>
+            <tr><td class="c-title">Les Misérables</td><td>Victor Hugo</td><td class="isbn">9782253096337</td><td class="num"><span aria-hidden="true">5 / 6</span><span class="visually-hidden">5 disponibles sur 6</span></td></tr>
+            <tr><td class="c-title">Madame Bovary</td><td>Gustave Flaubert</td><td class="isbn">9782253004868</td><td class="num"><span aria-hidden="true">1 / 2</span><span class="visually-hidden">1 disponible sur 2</span></td></tr>
+            <tr><td class="c-title">Notre-Dame de Paris</td><td>Victor Hugo</td><td class="isbn">9782253009689</td><td class="num"><span aria-hidden="true">2 / 2</span><span class="visually-hidden">2 disponibles sur 2</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="paginator" aria-label="Pagination">
+        <span class="pg disabled" aria-label="Première page"><svg class="i"><use href="#i-angle-double-left"/></svg></span>
+        <span class="pg disabled" aria-label="Page précédente"><svg class="i"><use href="#i-angle-left"/></svg></span>
+        <span class="pg active" aria-current="page">1</span>
+        <span class="pg">2</span>
+        <span class="pg">3</span>
+        <span class="pg" aria-label="Page suivante"><svg class="i"><use href="#i-angle-right"/></svg></span>
+        <span class="pg" aria-label="Dernière page"><svg class="i"><use href="#i-angle-double-right"/></svg></span>
+        <span class="report">1 à 10 sur 25</span>
+        <span class="select" aria-label="Lignes par page">10 <span aria-hidden="true"><svg class="i"><use href="#i-chevron-down"/></svg></span></span>
+      </nav>
+    </main>
+  </div>
+
+  <!-- ===================================================== 1b. Recherche active + rechargement -->
+  <h2 class="state-title">2. Recherche active (« camus ») et rechargement en cours</h2>
+  <p class="state-note">Le bouton d'effacement (×, <code>aria-label="Effacer la recherche"</code>) n'apparaît que si le champ contient du texte. Pendant l'appel (anti-rebond 300 ms ou Entrée), voile <code>[loading]</code> sur les lignes précédentes ; le champ reste utilisable. Compteur annoncé : « 2 résultats pour "camus" ». Vue <code>MEMBER</code> : pas de bouton « Ajouter un livre », aucun espace réservé.</p>
+  <div class="frame">
+    <header class="app-header">
+      <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a class="active" href="#" aria-current="page">Catalogue</a></nav>
+      <div class="header-right">
+        <span>lucas.bernard@exemple.fr</span>
+        <span class="tag mem">Membre</span>
+        <span class="btn-header"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span>Se déconnecter</span>
+      </div>
+    </header>
+    <main class="page">
+      <div class="title-row">
+        <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+      </div>
+      <div class="search">
+        <label for="s2">Rechercher par titre ou auteur</label>
+        <div class="iconfield">
+          <span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span>
+          <input id="s2" class="input" type="search" value="camus">
+          <button class="clear" type="button" aria-label="Effacer la recherche"><svg class="i"><use href="#i-times"/></svg></button>
+        </div>
+        <p class="counter" aria-live="polite">2 résultats pour "camus"</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Livres disponibles</caption>
+          <thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr></thead>
+          <tbody>
+            <tr><td class="c-title">L'Étranger</td><td>Albert Camus</td><td class="isbn">9782070360024</td><td class="num"><span aria-hidden="true">2 / 3</span><span class="visually-hidden">2 disponibles sur 3</span></td></tr>
+            <tr><td class="c-title">La Peste</td><td>Albert Camus</td><td class="isbn">9782070360420</td><td class="num"><span aria-hidden="true">2 / 2</span><span class="visually-hidden">2 disponibles sur 2</span></td></tr>
+          </tbody>
+        </table>
+        <div class="overlay" aria-hidden="true"><svg class="i"><use href="#i-spinner"/></svg></div>
+      </div>
+      <nav class="paginator" aria-label="Pagination">
+        <span class="pg disabled"><svg class="i"><use href="#i-angle-double-left"/></svg></span><span class="pg disabled"><svg class="i"><use href="#i-angle-left"/></svg></span>
+        <span class="pg active">1</span>
+        <span class="pg disabled"><svg class="i"><use href="#i-angle-right"/></svg></span><span class="pg disabled"><svg class="i"><use href="#i-angle-double-right"/></svg></span>
+        <span class="report">1 à 2 sur 2</span>
+        <span class="select">10 <span aria-hidden="true"><svg class="i"><use href="#i-chevron-down"/></svg></span></span>
+      </nav>
+    </main>
+  </div>
+
+  <!-- ===================================================== 3. Chargement initial -->
+  <h2 class="state-title">3. Chargement initial</h2>
+  <p class="state-note">En-têtes visibles, lignes <code>p-skeleton</code> (autant que <code>size</code>, 10 au plus ; 4 figurées ici), paginateur masqué, compteur « Chargement du catalogue… » (lu par <code>aria-live</code>), <code>aria-busy="true"</code> sur le tableau.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-row">
+        <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+        <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+      </div>
+      <div class="search">
+        <label for="s3">Rechercher par titre ou auteur</label>
+        <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="s3" class="input placeholder" type="search" placeholder="Ex. : Camus"></div>
+        <p class="counter" aria-live="polite">Chargement du catalogue…</p>
+      </div>
+      <div class="table-wrap" aria-busy="true">
+        <table>
+          <thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr></thead>
+          <tbody>
+            <tr><td><span class="skel" style="width:70%"></span></td><td><span class="skel" style="width:60%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:40%;margin-left:auto"></span></td></tr>
+            <tr><td><span class="skel" style="width:55%"></span></td><td><span class="skel" style="width:45%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:40%;margin-left:auto"></span></td></tr>
+            <tr><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:65%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:40%;margin-left:auto"></span></td></tr>
+            <tr><td><span class="skel" style="width:60%"></span></td><td><span class="skel" style="width:50%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:40%;margin-left:auto"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 4. Catalogue vide -->
+  <h2 class="state-title">4. Catalogue vide (aucune recherche)</h2>
+  <p class="state-note">Modèle <code>emptymessage</code> du tableau. Sans paginateur ni compteur. Texte secondaire selon le rôle : bibliothécaire (figuré) ou membre (« Revenez un peu plus tard : de nouveaux livres sont ajoutés régulièrement. »).</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-row">
+        <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+        <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+      </div>
+      <div class="search">
+        <label for="s4">Rechercher par titre ou auteur</label>
+        <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="s4" class="input placeholder" type="search" placeholder="Ex. : Camus"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr></thead>
+          <tbody><tr><td colspan="4" class="state">
+            <span class="big ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span>
+            <h3>Aucun livre disponible pour le moment</h3>
+            <p>Utilisez « Ajouter un livre » pour enrichir le catalogue.</p>
+          </td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 5. Recherche sans résultat -->
+  <h2 class="state-title">5. Recherche sans résultat</h2>
+  <p class="state-note">Le texte recherché est affiché échappé (interpolation). Le compteur annonce le même message. « Effacer la recherche » vide le champ, relance sans filtre et rend le focus au champ. Pas de paginateur.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-row">
+        <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+        <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+      </div>
+      <div class="search">
+        <label for="s5">Rechercher par titre ou auteur</label>
+        <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="s5" class="input" type="search" value="etranger"><button class="clear" type="button" aria-label="Effacer la recherche"><svg class="i"><use href="#i-times"/></svg></button></div>
+        <p class="counter" aria-live="polite">Aucun livre ne correspond à "etranger"</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr></thead>
+          <tbody><tr><td colspan="4" class="state">
+            <span class="big ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span>
+            <h3>Aucun livre ne correspond à "etranger"</h3>
+            <p>Vérifiez l'orthographe et les accents, ou essayez une partie du titre ou du nom de l'auteur.</p>
+            <button class="btn btn-outlined" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span>Effacer la recherche</button>
+          </td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 6. Erreur -->
+  <h2 class="state-title">6. Erreur de chargement (réseau ou 5xx)</h2>
+  <p class="state-note">Le toast de l'<code>errorInterceptor</code> s'affiche en haut à droite (« Erreur — Une erreur technique est survenue. Réessayez plus tard. », non figuré). Dans le tableau : message et « Réessayer » (même <code>page</code>, <code>size</code>, <code>q</code>). Paginateur et compteur masqués ; la recherche reste modifiable. Variante 403 : titre « Vous n'avez pas les droits nécessaires pour consulter le catalogue », sans bouton.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-row">
+        <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+        <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+      </div>
+      <div class="search">
+        <label for="s6">Rechercher par titre ou auteur</label>
+        <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="s6" class="input placeholder" type="search" placeholder="Ex. : Camus"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="num col-avail">Exemplaires disponibles</th></tr></thead>
+          <tbody><tr><td colspan="4" class="state">
+            <span class="big err ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span>
+            <h3>Le catalogue n'a pas pu être chargé</h3>
+            <p>Vérifiez votre connexion, puis réessayez.</p>
+            <button class="btn btn-outlined" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-refresh"/></svg></span>Réessayer</button>
+          </td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 7. Mobile -->
+  <h2 class="state-title">7. Mobile (390 px)</h2>
+  <p class="state-note">Marges 16 px, aucun défilement horizontal de la page. En-tête : e-mail et rôles masqués sous 576 px, « Se déconnecter » réduit à l'icône (<code>aria-label</code>). Colonnes Auteur et ISBN masquées ; leur contenu passe en sous-lignes sous le titre. En-tête de colonne raccourci « Disponibles ». Paginateur réduit (3 numéros, sans rapport). À gauche : liste ; à droite : recherche sans résultat.</p>
+  <div class="row-mobile">
+    <div>
+      <div class="frame mobile">
+        <header class="app-header">
+          <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+          <nav class="nav" aria-label="Navigation principale"><a class="active" href="#" aria-current="page">Catalogue</a></nav>
+          <div class="header-right"><span class="btn-header" aria-label="Se déconnecter"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span></span></div>
+        </header>
+        <main class="page">
+          <div class="title-row">
+            <div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div>
+            <button class="btn btn-primary" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-plus"/></svg></span>Ajouter un livre</button>
+          </div>
+          <div class="search">
+            <label for="m1">Rechercher par titre ou auteur</label>
+            <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="m1" class="input placeholder" type="search" placeholder="Ex. : Camus"></div>
+            <p class="counter">25 livres disponibles</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Livres disponibles</caption>
+              <thead><tr><th scope="col">Titre</th><th scope="col" class="num col-avail">Disponibles</th></tr></thead>
+              <tbody>
+                <tr><td><span class="c-title">Bel-Ami</span><span class="sub">Guy de Maupassant</span><span class="sub isbn">ISBN 9782253004226</span></td><td class="num"><span aria-hidden="true">2 / 3</span><span class="visually-hidden">2 disponibles sur 3</span></td></tr>
+                <tr><td><span class="c-title">Candide</span><span class="sub">Voltaire</span><span class="sub isbn">ISBN 9782070408504</span></td><td class="num"><span aria-hidden="true">1 / 1</span><span class="visually-hidden">1 disponible sur 1</span></td></tr>
+                <tr><td><span class="c-title">Le Comte de Monte-Cristo</span><span class="sub">Alexandre Dumas</span><span class="sub isbn">ISBN 9782253098041</span></td><td class="num"><span aria-hidden="true">1 / 4</span><span class="visually-hidden">1 disponible sur 4</span></td></tr>
+                <tr><td><span class="c-title">Le Petit Prince</span><span class="sub">Antoine de Saint-Exupéry</span><span class="sub isbn">ISBN 9782070612758</span></td><td class="num"><span aria-hidden="true">3 / 3</span><span class="visually-hidden">3 disponibles sur 3</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <nav class="paginator" aria-label="Pagination">
+            <span class="pg disabled"><svg class="i"><use href="#i-angle-left"/></svg></span><span class="pg active">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg"><svg class="i"><use href="#i-angle-right"/></svg></span>
+            <span class="select">10 <span aria-hidden="true"><svg class="i"><use href="#i-chevron-down"/></svg></span></span>
+          </nav>
+        </main>
+      </div>
+      <p class="caption">Liste (bibliothécaire), 4 lignes sur 10 figurées.</p>
+    </div>
+    <div>
+      <div class="frame mobile">
+        <header class="app-header">
+          <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+          <nav class="nav" aria-label="Navigation principale"><a class="active" href="#" aria-current="page">Catalogue</a></nav>
+          <div class="header-right"><span class="btn-header" aria-label="Se déconnecter"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span></span></div>
+        </header>
+        <main class="page">
+          <div class="title-row"><div><h2>Catalogue</h2><p class="subtitle">Livres disponibles à l'emprunt</p></div></div>
+          <div class="search">
+            <label for="m2">Rechercher par titre ou auteur</label>
+            <div class="iconfield"><span class="lead-ico ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span><input id="m2" class="input" type="search" value="proust"><button class="clear" type="button" aria-label="Effacer la recherche"><svg class="i"><use href="#i-times"/></svg></button></div>
+            <p class="counter">Aucun livre ne correspond à "proust"</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Titre</th><th scope="col" class="num col-avail">Disponibles</th></tr></thead>
+              <tbody><tr><td colspan="2" class="state">
+                <span class="big ico" aria-hidden="true"><svg class="i"><use href="#i-search"/></svg></span>
+                <h3>Aucun livre ne correspond à "proust"</h3>
+                <p>Vérifiez l'orthographe et les accents, ou essayez une partie du titre ou du nom de l'auteur.</p>
+                <button class="btn btn-outlined" type="button">Effacer la recherche</button>
+              </td></tr></tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+      <p class="caption">Recherche sans résultat (membre : pas de bouton d'ajout).</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

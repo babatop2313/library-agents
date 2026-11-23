@@ -1,0 +1,32 @@
+.form-note,
+.form-help {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+:host ::ng-deep .copies-field {
+  width: 100%;
+}
+
+@media (min-width: 576px) {
+  :host ::ng-deep .copies-field {
+    width: 12rem;
+  }
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (max-width: 575.98px) {
+  .footer-actions > * {
+    flex: 1 1 50%;
+  }
+
+  .footer-actions ::ng-deep .p-button {
+    width: 100%;
+  }
+}

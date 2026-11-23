@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "ISBN déjà enregistré",
+  "status": 409,
+  "detail": "Un livre avec cet ISBN existe déjà",
+  "instance": "/api/v1/books",
+  "code": "ISBN_ALREADY_EXISTS"
+}

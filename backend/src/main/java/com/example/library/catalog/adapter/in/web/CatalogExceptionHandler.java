@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Set;
 
 import com.example.library.catalog.domain.exception.InvalidBookException;
+import com.example.library.catalog.domain.exception.InvalidCatalogSearchException;
 import com.example.library.catalog.domain.exception.InvalidIsbnException;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
+import com.example.library.catalog.domain.model.CatalogPageRequest;
+import com.example.library.catalog.domain.model.SearchText;
 import com.example.library.catalog.domain.model.ViolationCode;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -63,6 +66,16 @@ class CatalogExceptionHandler {
     }
 
     /** Défense : la validation web a normalement déjà intercepté ce cas. */
+    @ExceptionHandler(InvalidCatalogSearchException.class)
+    ProblemDetail handleInvalidCatalogSearch(InvalidCatalogSearchException e) {
+        List<ApiError> errors = e.violations().stream()
+                .map(v -> toApiError(v.field(), v.code()))
+                .distinct()
+                .toList();
+        return validationProblem(errors);
+    }
+
+    /** Défense : la validation web a normalement déjà intercepté ce cas. */
     @ExceptionHandler(InvalidIsbnException.class)
     ProblemDetail handleInvalidIsbn(InvalidIsbnException e) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
@@ -86,6 +99,19 @@ class CatalogExceptionHandler {
         problem.setProperty("code", VALIDATION_FAILED);
         problem.setProperty("errors", errors);
         return problem;
+    }
+
+    /** Messages propres aux paramètres du GET (page, size, q) ; null pour les champs du POST. */
+    private static String searchParamMessage(String field, ViolationCode code) {
+        return switch (field) {
+            case "page" -> "Le paramètre 'page' doit être un entier supérieur ou égal à 0";
+            case "size" -> "Le paramètre 'size' doit être un entier compris entre 1 et "
+                    + CatalogPageRequest.MAX_SIZE;
+            case "q" -> code == ViolationCode.TOO_LONG
+                    ? "Le paramètre 'q' est trop long (" + SearchText.MAX_LENGTH + " caractères maximum)"
+                    : "Le paramètre 'q' est invalide";
+            default -> null;
+        };
     }
 
     private static ViolationCode codeOf(FieldError error) {
@@ -123,6 +149,10 @@ class CatalogExceptionHandler {
     }
 
     private static String messageOf(String field, ViolationCode code) {
+        String searchMessage = searchParamMessage(field, code);
+        if (searchMessage != null) {
+            return searchMessage;
+        }
         return switch (code) {
             case REQUIRED -> "Le champ '" + field + "' est obligatoire";
             case BLANK -> "Le champ '" + field + "' ne doit pas être vide";

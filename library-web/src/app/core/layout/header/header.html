@@ -1,4 +1,4 @@
-<header class="app-header d-flex align-items-center px-4 py-3">
+<header class="app-header d-flex align-items-center gap-3 gap-md-4 px-3 px-md-4 py-3">
   <a routerLink="/" class="app-title d-flex align-items-center gap-2">
     <i class="pi pi-book" aria-hidden="true"></i>
     <span>Bibliothèque</span>
@@ -6,14 +6,25 @@
 
   @let current = user();
   @if (current) {
-    <div class="ms-auto d-flex align-items-center gap-3">
-      <span class="app-user">{{ current.email ?? 'Utilisateur connecté' }}</span>
+    <nav aria-label="Navigation principale">
+      <a
+        routerLink="/catalogue"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        class="app-nav-link"
+        >Catalogue</a
+      >
+    </nav>
+    <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
+      <span class="app-user d-none d-sm-inline">{{ current.email ?? 'Utilisateur connecté' }}</span>
       @for (role of current.roles; track role) {
-        <p-tag [value]="label(role)" [severity]="severity(role)" />
+        <p-tag styleClass="d-none d-sm-inline-flex" [value]="label(role)" [severity]="severity(role)" />
       }
       <p-button
         label="Se déconnecter"
         icon="pi pi-sign-out"
+        ariaLabel="Se déconnecter"
+        styleClass="app-logout"
         severity="secondary"
         size="small"
         [loading]="loggingOut()"

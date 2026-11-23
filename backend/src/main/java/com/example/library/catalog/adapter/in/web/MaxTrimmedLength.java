@@ -6,6 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.example.library.catalog.domain.model.Book;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
@@ -17,6 +18,9 @@ import jakarta.validation.Payload;
 @interface MaxTrimmedLength {
 
     String message() default "Le texte est trop long";
+
+    /** Longueur maximale après trim ; 255 par défaut (titre et auteur). */
+    int max() default Book.TEXT_MAX_LENGTH;
 
     Class<?>[] groups() default {};
 

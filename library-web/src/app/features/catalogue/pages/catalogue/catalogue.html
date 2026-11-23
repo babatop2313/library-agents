@@ -1,0 +1,45 @@
+<section class="container-xl px-3 px-md-4 py-4">
+  <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="page-title">Catalogue</h1>
+      <p class="page-subtitle">Livres disponibles à l'emprunt</p>
+    </div>
+    @if (canRegister()) {
+      <p-button
+        #addButton
+        label="Ajouter un livre"
+        icon="pi pi-plus"
+        (onClick)="openRegister()"
+      />
+    }
+  </div>
+
+  <div class="search-zone mb-3">
+    <app-book-search [value]="state().q" (searchChange)="onSearch($event)" />
+    <p class="counter" aria-live="polite">{{ counter() }}</p>
+  </div>
+
+  <app-book-table
+    [books]="books()"
+    [status]="tableStatus()"
+    [retrying]="retrying()"
+    [totalElements]="totalElements()"
+    [page]="state().page"
+    [size]="state().size"
+    [query]="state().q"
+    [canRegister]="canRegister()"
+    (pageChange)="changePage($event)"
+    (retry)="retry()"
+    (clearSearch)="clearSearch()"
+  />
+</section>
+
+@if (canRegister()) {
+  <app-book-form-dialog
+    [visible]="registerOpen()"
+    [submitting]="submitting()"
+    [serverError]="serverError()"
+    (visibleChange)="onRegisterVisibleChange($event)"
+    (save)="register($event)"
+  />
+}

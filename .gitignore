@@ -1,6 +1,6 @@
 # Secrets : tous les fichiers .env, sauf le modèle
-.env*
-!.env.example
+.env
+!.env
 
 # Certificats et clés
 *.pem

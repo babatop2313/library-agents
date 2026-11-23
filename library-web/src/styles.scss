@@ -1,1 +1,30 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --app-font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --app-header-bg: linear-gradient(90deg, var(--p-primary-600), var(--p-fuchsia-600));
+}
+
+body {
+  margin: 0;
+  font-family: var(--app-font);
+  color: var(--p-text-color);
+  background: var(--p-surface-0);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Le texte du bouton de déconnexion disparaît sous 576 px : seule l'icône reste (aria-label conservé). */
+@media (max-width: 575.98px) {
+  .app-logout .p-button-label {
+    display: none;
+  }
+}
