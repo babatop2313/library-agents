@@ -60,7 +60,10 @@ docs/specs/                                ← une spec par fonctionnalité
 - Base de données : **PostgreSQL installé sur Windows** (port 5432, base et utilisateur `library`).
   Ne pas utiliser `docker compose` pour la base.
 - Docker Desktop sert uniquement aux tests (Testcontainers lance un PostgreSQL jetable).
-- Variables nécessaires au lancement : `DB_PASSWORD`, `JWT_SECRET` (dans `.env`, jamais commité).
+- Variables obligatoires au lancement : `DB_USER`, `DB_PASSWORD`, `JWT_SECRET` (32 octets minimum), dans `.env`,
+  jamais commité. Aucune valeur par défaut dans `application.yml` : si l'une manque ou est vide, l'application
+  refuse de démarrer et liste les variables absentes. En test, `src/test/resources/application.properties`
+  les fournit (Testcontainers remplace la vraie connexion).
 - Amorçage du premier bibliothécaire (au démarrage, seulement si aucun `LIBRARIAN` n'existe) :
   `BOOTSTRAP_LIBRARIAN_EMAIL`, `BOOTSTRAP_LIBRARIAN_PASSWORD` (12 caractères minimum), dans `.env`.
   Aucune valeur par défaut, ni dans `application.yml` ni dans le code ; absentes = aucun compte créé (WARN).
@@ -72,7 +75,7 @@ docs/specs/                                ← une spec par fonctionnalité
 | Tests backend (Docker Desktop démarré) | `cd backend && ./mvnw test` |
 | Un seul test | `cd backend && ./mvnw test -Dtest=NomDuTest` |
 | Vérifier l'architecture | `cd backend && ./mvnw test -Dtest=ArchitectureTest` |
-| Lancer l'API | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local` (avec `DB_PASSWORD` et `JWT_SECRET` définis) |
+| Lancer l'API | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local` (avec `DB_USER`, `DB_PASSWORD` et `JWT_SECRET` définis) |
 | Installer les dépendances du frontend | `cd library-web && npm ci` |
 | Lancer le frontend (backend démarré) | `cd library-web && npx ng serve` → http://localhost:4200 (connexion avec le bibliothécaire d'amorçage) |
 | Tests frontend | `cd library-web && npx ng test --watch=false` |

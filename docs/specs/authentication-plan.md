@@ -12,7 +12,7 @@ Plan validé le 2026-11-20.
 5. **`/error`** accessible sans authentification (`dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()`).
 6. Laissés de côté : régénération du jeton CSRF après login, sortie de BCrypt de la transaction du login.
 7. **Limite connue** : un compte désactivé reste utilisable jusqu'à l'expiration de son jeton (1 h max), puisque `/me` et les autres routes ne lisent pas la base.
-8. **`JWT_SECRET`** a une valeur par défaut dans `application.yml` (contraire au socle) : corrigé dans une PR séparée, après cette feature. Ne pas y toucher ici.
+8. **`JWT_SECRET`** a une valeur par défaut dans `application.yml` (contraire au socle) : corrigé dans une PR séparée, après cette feature. Ne pas y toucher ici. **Réglé** par `fix/secrets-sans-valeur-par-defaut` (`JWT_SECRET`, `DB_USER`, `DB_PASSWORD` sans valeur par défaut, démarrage refusé si absents).
 
 ## 1. Architecture et ArchitectureTest
 **Confirmé : `ArchitectureTest` couvre le module `identity` sans aucun changement.**
@@ -160,7 +160,7 @@ Vérifier que les tests existants (`BookControllerTest`, `McpSecurityTest`, `Mcp
 app:
   security:
     jwt:
-      secret: ${JWT_SECRET:...}      # existant, NE PAS MODIFIER (PR séparée)
+      secret: ${JWT_SECRET:...}      # existant, NE PAS MODIFIER (PR séparée) — devenu ${JWT_SECRET} depuis fix/secrets-sans-valeur-par-defaut
       ttl: ${JWT_TTL:PT1H}
       cookie-name: ACCESS_TOKEN
     bcrypt:
@@ -280,7 +280,7 @@ Frontend (Vitest) : `auth.service.spec`, `auth.interceptor.spec` (deux 401 → u
 8. JWT non révocable : valide jusqu'à 1 h après la déconnexion.
 9. **Compte désactivé utilisable jusqu'à l'expiration de son jeton (1 h max)**, puisque `/me` et les autres routes ne lisent pas la base (décision 7).
 10. `Secure` sur `http://localhost` : ok Chrome/Firefox, à vérifier sur Safari.
-11. `JWT_SECRET` avec valeur par défaut : PR séparée après cette feature (décision 8).
+11. `JWT_SECRET` avec valeur par défaut : PR séparée après cette feature (décision 8). Réglé par `fix/secrets-sans-valeur-par-defaut`.
 12. `catalog` non modifié ; futur `loan` utilisera `jwt.getSubject()` ; `/mcp` non impacté (cookie `Path=/api`).
 13. Regrouper les scénarios `@SpringBootTest` d'amorçage (coût de contexte).
 

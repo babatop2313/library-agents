@@ -333,4 +333,4 @@ Décisions de validation du plan (2026-11-20) :
 19. **`/me` avec un jeton `/dev/token`** : 200, `email` null (profil `local` uniquement) (RM-AUTH-26).
 20. **401/403 de Spring Security en `ProblemDetail`** (`AuthenticationEntryPoint` + `AccessDeniedHandler`) ; `/error` accessible sans authentification (RM-AUTH-28).
 21. **Limite connue** : un compte désactivé reste utilisable jusqu'à l'expiration de son jeton (1 h max), puisque `/me` ne lit pas la base.
-22. **`JWT_SECRET`** (valeur par défaut dans `application.yml`) : corrigé dans une PR séparée, après cette feature.
+22. **`JWT_SECRET`** (valeur par défaut dans `application.yml`) : corrigé dans une PR séparée, après cette feature. **Réglé** par `fix/secrets-sans-valeur-par-defaut` : plus aucune valeur par défaut pour `JWT_SECRET`, `DB_USER` ni `DB_PASSWORD` ; démarrage refusé, avec la liste des variables manquantes, si l'une est absente ou vide.

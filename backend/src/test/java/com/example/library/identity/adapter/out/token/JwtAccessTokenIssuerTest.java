@@ -32,7 +32,7 @@ class JwtAccessTokenIssuerTest {
             "test-only-secret-key-not-for-production-0123456789".getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     private static final Instant ISSUED_AT = Instant.parse("2026-11-20T10:00:00.789Z");
 
-    private final JwtProperties properties = new JwtProperties("ignored", Duration.ofHours(1), "ACCESS_TOKEN");
+    private final JwtProperties properties = new JwtProperties(Duration.ofHours(1), "ACCESS_TOKEN");
     private final JwtAccessTokenIssuer issuer =
             new JwtAccessTokenIssuer(new NimbusJwtEncoder(new ImmutableSecret<>(KEY)), properties);
 
@@ -100,7 +100,7 @@ class JwtAccessTokenIssuerTest {
     void issue_quandTtlConfigureDifferent_alorsExpSuitLaConfiguration() {
         // Given
         JwtAccessTokenIssuer shortLived = new JwtAccessTokenIssuer(new NimbusJwtEncoder(new ImmutableSecret<>(KEY)),
-                new JwtProperties("ignored", Duration.ofMinutes(5), "ACCESS_TOKEN"));
+                new JwtProperties(Duration.ofMinutes(5), "ACCESS_TOKEN"));
 
         // When
         Jwt jwt = decode(shortLived.issue(user(Role.MEMBER), ISSUED_AT));

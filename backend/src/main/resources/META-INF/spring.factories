@@ -1,0 +1,5 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+com.example.library.config.RequiredEnvironmentVariables
+
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+com.example.library.config.MissingEnvironmentVariablesFailureAnalyzer
