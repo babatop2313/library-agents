@@ -79,6 +79,7 @@ docs/specs/                                ← une spec par fonctionnalité
 | Lancer l'API | `cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=local` (avec `DB_USER`, `DB_PASSWORD` et `JWT_SECRET` définis) |
 | Installer les dépendances du frontend | `cd library-web && npm ci` |
 | Lancer le frontend (backend démarré) | `cd library-web && npx ng serve` → http://localhost:4200 (connexion avec le bibliothécaire d'amorçage) |
+| Lancer le frontend sans backend (données simulées) | `cd library-web && npx ng serve --configuration mock` → comptes fictifs dans `src/mocks/auth/users.json` |
 | Tests frontend | `cd library-web && npx ng test --watch=false` |
 | Lint frontend | `cd library-web && npm run lint` |
 | Build frontend | `cd library-web && npx ng build` |

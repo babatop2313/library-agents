@@ -59,6 +59,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "mock": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/mock/mock.providers.ts",
+                  "with": "src/app/core/mock/mock.providers.mock.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -71,6 +82,10 @@
             },
             "development": {
               "buildTarget": "library-web:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "mock": {
+              "buildTarget": "library-web:build:mock",
               "proxyConfig": "proxy.conf.json"
             }
           },
