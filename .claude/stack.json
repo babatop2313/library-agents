@@ -4,5 +4,6 @@
     "postgresql",
     "redis"
   ],
-  "conventions": {}
+  "conventions": {},
+  "modules": { "redis": ["catalog"], "mcp": ["catalog"] }
 }
