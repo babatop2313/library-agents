@@ -2,15 +2,20 @@ package com.example.library.catalog.adapter.out.persistence;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import com.example.library.catalog.application.port.out.ChangeAvailableCopiesPort;
 import com.example.library.catalog.application.port.out.CheckIsbnRegisteredPort;
 import com.example.library.catalog.application.port.out.CountAvailableBooksPort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
+import com.example.library.catalog.application.port.out.LoadBookByIdPort;
 import com.example.library.catalog.application.port.out.LoadBookByIsbnPort;
+import com.example.library.catalog.application.port.out.LoadBooksByIdsPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
 import com.example.library.catalog.domain.model.SearchText;
@@ -21,7 +26,8 @@ import org.springframework.stereotype.Component;
 @Component("bookPersistenceAdapter")
 class BookPersistenceAdapter
         implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort,
-        LoadAvailableBooksPagePort, CountAvailableBooksPort {
+        LoadAvailableBooksPagePort, CountAvailableBooksPort, LoadBookByIdPort, LoadBooksByIdsPort,
+        ChangeAvailableCopiesPort {
 
     static final String ISBN_UNIQUE_CONSTRAINT = "uk_book_isbn";
 
@@ -62,6 +68,29 @@ class BookPersistenceAdapter
         return text.isEmpty()
                 ? repository.countAvailable()
                 : repository.countAvailableMatching(LikePatterns.containsPattern(text.value()));
+    }
+
+    @Override
+    public Optional<Book> loadById(BookId id) {
+        return repository.findById(id.value()).map(mapper::toDomain);
+    }
+
+    /** Une seule requête {@code WHERE id IN (...)}. */
+    @Override
+    public List<Book> loadByIds(Set<BookId> ids) {
+        return repository.findAllById(ids.stream().map(BookId::value).toList()).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public boolean decrementAvailableCopies(BookId id) {
+        return repository.decrementAvailableCopies(id.value()) == 1;
+    }
+
+    @Override
+    public boolean incrementAvailableCopies(BookId id) {
+        return repository.incrementAvailableCopies(id.value()) == 1;
     }
 
     @Override

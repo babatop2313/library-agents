@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import com.example.library.catalog.domain.exception.AvailableCopiesOverflowException;
 import com.example.library.catalog.domain.exception.InvalidBookException;
+import com.example.library.catalog.domain.exception.NoCopyAvailableException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -213,5 +215,88 @@ class BookTest {
     @Test
     void bookId_quandNull_alorsNullPointerException() {
         assertThatThrownBy(() -> new BookId(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    // ---- RM-04 (RM-LOAN-01, 09, 10, 31) : prise et restitution d'un exemplaire
+
+    @Test
+    void takeCopy_quandDeuxExemplairesDisponibles_alorsUnSeulDisponibleEtTotalInchange() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 2);
+        // When
+        Book taken = book.takeCopy();
+        // Then
+        assertThat(taken.getAvailableCopies()).isEqualTo(1);
+        assertThat(taken.getTotalCopies()).isEqualTo(3);
+        assertThat(taken.getId()).isEqualTo(book.getId());
+        assertThat(taken.getIsbn()).isEqualTo(book.getIsbn());
+        assertThat(taken.getTitle()).isEqualTo("T");
+        assertThat(taken.getAuthor()).isEqualTo("A");
+    }
+
+    @Test
+    void takeCopy_quandDernierExemplaire_alorsPlusAucunDisponible() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 1);
+        // When
+        Book taken = book.takeCopy();
+        // Then
+        assertThat(taken.getAvailableCopies()).isZero();
+        assertThat(taken.isAvailable()).isFalse();
+    }
+
+    @Test
+    void takeCopy_quandAucunExemplaireDisponible_alorsNoCopyAvailable() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 0);
+        // When / Then : RM-04
+        assertThatThrownBy(book::takeCopy)
+                .isInstanceOf(NoCopyAvailableException.class)
+                .extracting("code").isEqualTo("BOOK_NOT_AVAILABLE");
+        assertThat(book.getAvailableCopies()).isZero();
+    }
+
+    @Test
+    void takeCopy_quandAppelSurLivre_alorsLivreCourantInchange() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 2);
+        // When
+        book.takeCopy();
+        // Then : l'agrégat est immuable
+        assertThat(book.getAvailableCopies()).isEqualTo(2);
+    }
+
+    @Test
+    void returnCopy_quandZeroDisponible_alorsUnDisponibleEtTotalInchange() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 0);
+        // When
+        Book returned = book.returnCopy();
+        // Then
+        assertThat(returned.getAvailableCopies()).isEqualTo(1);
+        assertThat(returned.getTotalCopies()).isEqualTo(3);
+        assertThat(returned.isAvailable()).isTrue();
+        assertThat(book.getAvailableCopies()).isZero();
+    }
+
+    @Test
+    void returnCopy_quandTousExemplairesDisponibles_alorsAvailableCopiesOverflow() {
+        // Given : incohérence de données, le total ne peut jamais être dépassé
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 3, 3);
+        // When / Then
+        assertThatThrownBy(book::returnCopy)
+                .isInstanceOf(AvailableCopiesOverflowException.class)
+                .extracting("code").isEqualTo("AVAILABLE_COPIES_OVERFLOW");
+    }
+
+    @Test
+    void takeCopyPuisReturnCopy_quandEnchaines_alorsEtatInitialRetrouve() {
+        // Given
+        Book book = Book.restore(BookId.newId(), ISBN, "T", "A", 2, 2);
+        // When
+        Book roundTrip = book.takeCopy().returnCopy();
+        // Then
+        assertThat(roundTrip.getAvailableCopies()).isEqualTo(2);
+        assertThat(roundTrip.getTotalCopies()).isEqualTo(2);
     }
 }

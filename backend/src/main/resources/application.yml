@@ -50,6 +50,7 @@ spring:
           enabled: true
 
 app:
+  timezone: ${APP_TIMEZONE:Africa/Dakar}   # fuseau de la bibliothèque : définit « la date du jour » des emprunts
   security:
     jwt:
       secret: ${JWT_SECRET:Les_valeurs_par_defaut_sont_refusees_gardes_ca_Les_valeurs_par_defaut_sont_refusees_gardes_ca}       # secret : aucune valeur par défaut, démarrage refusé si absent ; au moins 32 octets

@@ -5,16 +5,21 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+import com.example.library.catalog.application.port.out.ChangeAvailableCopiesPort;
 import com.example.library.catalog.application.port.out.CheckIsbnRegisteredPort;
 import com.example.library.catalog.application.port.out.CountAvailableBooksPort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
+import com.example.library.catalog.application.port.out.LoadBookByIdPort;
 import com.example.library.catalog.application.port.out.LoadBookByIsbnPort;
+import com.example.library.catalog.application.port.out.LoadBooksByIdsPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.AvailableBooksLimit;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
 import com.example.library.catalog.domain.model.SearchText;
@@ -23,7 +28,8 @@ import com.example.library.catalog.domain.service.AvailableBooksSelection;
 /** Fake en memoire des ports de sortie du catalogue. */
 public class InMemoryBookRepository
         implements CheckIsbnRegisteredPort, SaveBookPort, LoadBookByIsbnPort, LoadAvailableBooksPort,
-        LoadAvailableBooksPagePort, CountAvailableBooksPort {
+        LoadAvailableBooksPagePort, CountAvailableBooksPort, LoadBookByIdPort, LoadBooksByIdsPort,
+        ChangeAvailableCopiesPort {
 
     private final Map<Isbn, Book> books = new LinkedHashMap<>();
     private final AvailableBooksSelection selection = new AvailableBooksSelection();
@@ -36,6 +42,11 @@ public class InMemoryBookRepository
     private int countCalls;
     private CatalogPageRequest lastPageRequest;
     private SearchText lastText;
+    private int loadByIdCalls;
+    private int loadByIdsCalls;
+    private int decrementCalls;
+    private int incrementCalls;
+    private boolean simulateLostRace;
 
     @Override
     public boolean isRegistered(Isbn isbn) {
@@ -134,5 +145,62 @@ public class InMemoryBookRepository
 
     public SearchText lastText() {
         return lastText;
+    }
+
+    @Override
+    public Optional<Book> loadById(BookId id) {
+        loadByIdCalls++;
+        return books.values().stream().filter(book -> book.getId().equals(id)).findFirst();
+    }
+
+    @Override
+    public List<Book> loadByIds(Set<BookId> ids) {
+        loadByIdsCalls++;
+        return books.values().stream().filter(book -> ids.contains(book.getId())).toList();
+    }
+
+    /** Comme le SQL conditionnel : false si plus d'exemplaire disponible ou si le livre est absent. */
+    @Override
+    public boolean decrementAvailableCopies(BookId id) {
+        decrementCalls++;
+        Optional<Book> book = books.values().stream().filter(b -> b.getId().equals(id)).findFirst();
+        if (simulateLostRace || book.isEmpty() || !book.get().isAvailable()) {
+            return false;
+        }
+        books.put(book.get().getIsbn(), book.get().takeCopy());
+        return true;
+    }
+
+    /** Comme le SQL conditionnel : false si tous les exemplaires sont deja disponibles ou si le livre est absent. */
+    @Override
+    public boolean incrementAvailableCopies(BookId id) {
+        incrementCalls++;
+        Optional<Book> book = books.values().stream().filter(b -> b.getId().equals(id)).findFirst();
+        if (book.isEmpty() || book.get().getAvailableCopies() >= book.get().getTotalCopies()) {
+            return false;
+        }
+        books.put(book.get().getIsbn(), book.get().returnCopy());
+        return true;
+    }
+
+    /** Simule la course perdue : le livre semble disponible a la lecture, mais la mise a jour conditionnelle echoue. */
+    public void simulateLostRace() {
+        this.simulateLostRace = true;
+    }
+
+    public int loadByIdCalls() {
+        return loadByIdCalls;
+    }
+
+    public int loadByIdsCalls() {
+        return loadByIdsCalls;
+    }
+
+    public int decrementCalls() {
+        return decrementCalls;
+    }
+
+    public int incrementCalls() {
+        return incrementCalls;
     }
 }

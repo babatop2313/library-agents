@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import com.example.library.PostgresTestcontainersConfiguration;
 import com.example.library.RedisTestcontainersConfiguration;
@@ -13,6 +14,8 @@ import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
 import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.Isbn;
+import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +30,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Persistance reelle (PostgreSQL via Testcontainers, schema Flyway V1) : RM-07, RM-CAT-04, RM-CAT-08. */
-@DataJpaTest
+@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({PostgresTestcontainersConfiguration.class, BookPersistenceAdapter.class, BookPersistenceMapper.class})
 class BookPersistenceAdapterTest {
@@ -43,6 +46,9 @@ class BookPersistenceAdapterTest {
 
     @Autowired
     private ApplicationContext context;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @AfterEach
     void cleanUp() {
@@ -268,5 +274,167 @@ class BookPersistenceAdapterTest {
                 "INSERT INTO book (id, isbn, title, author, total_copies, available_copies, version)"
                         + " VALUES (gen_random_uuid(), '9782070368228', 't', 'a', 0, 0, 0)"))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    // ---- emprunts : lecture par identifiant et mise à jour atomique du stock (RM-04, RM-LOAN-31, 32)
+
+    private Book givenSavedBook(String isbn, int total, int available) {
+        Book book = Book.restore(BookId.newId(), Isbn.of(isbn), "Titre " + isbn, "Auteur", total, available);
+        adapter.save(book);
+        return book;
+    }
+
+    private int availableCopiesOf(Book book) {
+        return jdbc.queryForObject("SELECT available_copies FROM book WHERE id = ?", Integer.class,
+                book.getId().value());
+    }
+
+    private long versionOf(Book book) {
+        return jdbc.queryForObject("SELECT version FROM book WHERE id = ?", Long.class, book.getId().value());
+    }
+
+    @Test
+    void loadById_quandLivreSauvegarde_alorsPresentAvecTousLesChamps() {
+        // Given
+        Book book = givenSavedBook("9782070368228", 3, 2);
+        entityManager.clear();
+        // When
+        Optional<Book> result = adapter.loadById(book.getId());
+        // Then
+        assertThat(result).isPresent();
+        assertThat(result.get().getIsbn().value()).isEqualTo("9782070368228");
+        assertThat(result.get().getTotalCopies()).isEqualTo(3);
+        assertThat(result.get().getAvailableCopies()).isEqualTo(2);
+    }
+
+    @Test
+    void loadById_quandLivreSansExemplaireDisponible_alorsQuandMemePresent() {
+        // Given : lecture directe, jamais filtrée sur la disponibilité
+        Book book = givenSavedBook("9782070368228", 2, 0);
+        // When / Then
+        assertThat(adapter.loadById(book.getId())).isPresent();
+    }
+
+    @Test
+    void loadById_quandIdentifiantInconnu_alorsAbsent() {
+        // When / Then
+        assertThat(adapter.loadById(BookId.newId())).isEmpty();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandUnExemplaireDisponible_alorsTrueDisponibleAZeroPuisFaux() {
+        // Given
+        Book book = givenSavedBook("9782070368228", 3, 1);
+        long versionBefore = versionOf(book);
+        // When
+        boolean first = adapter.decrementAvailableCopies(book.getId());
+        boolean second = adapter.decrementAvailableCopies(book.getId());
+        // Then : RM-LOAN-31, la condition SQL arrête la décrémentation à 0 sans erreur
+        assertThat(first).isTrue();
+        assertThat(second).isFalse();
+        assertThat(availableCopiesOf(book)).isZero();
+        assertThat(jdbc.queryForObject("SELECT total_copies FROM book WHERE id = ?", Integer.class,
+                book.getId().value())).isEqualTo(3);
+        assertThat(versionOf(book)).isEqualTo(versionBefore + 1);
+    }
+
+    @Test
+    void decrementAvailableCopies_quandLivreInconnu_alorsFaux() {
+        // When / Then
+        assertThat(adapter.decrementAvailableCopies(BookId.newId())).isFalse();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandDeuxExemplaires_alorsUnSeulRetire() {
+        // Given
+        Book book = givenSavedBook("9782070368228", 3, 2);
+        // When
+        adapter.decrementAvailableCopies(book.getId());
+        // Then
+        assertThat(availableCopiesOf(book)).isEqualTo(1);
+    }
+
+    @Test
+    void incrementAvailableCopies_quandUnExemplaireEmprunte_alorsTrueEtDisponiblesIncrementes() {
+        // Given
+        Book book = givenSavedBook("9782070368228", 3, 2);
+        long versionBefore = versionOf(book);
+        // When
+        boolean changed = adapter.incrementAvailableCopies(book.getId());
+        // Then
+        assertThat(changed).isTrue();
+        assertThat(availableCopiesOf(book)).isEqualTo(3);
+        assertThat(versionOf(book)).isEqualTo(versionBefore + 1);
+    }
+
+    @Test
+    void incrementAvailableCopies_quandTousExemplairesDisponibles_alorsFauxEtStockInchange() {
+        // Given : borné par total_copies
+        Book book = givenSavedBook("9782070368228", 3, 3);
+        long versionBefore = versionOf(book);
+        // When
+        boolean changed = adapter.incrementAvailableCopies(book.getId());
+        // Then
+        assertThat(changed).isFalse();
+        assertThat(availableCopiesOf(book)).isEqualTo(3);
+        assertThat(versionOf(book)).isEqualTo(versionBefore);
+    }
+
+    @Test
+    void incrementAvailableCopies_quandLivreInconnu_alorsFaux() {
+        // When / Then
+        assertThat(adapter.incrementAvailableCopies(BookId.newId())).isFalse();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void migration_quandEcritureDirecteDisponiblesNegatifs_alorsRefuseParCkBookAvailableCopiesRange() {
+        // Given : un livre dont availableCopies vaut 0 (RM-LOAN-31, double garantie)
+        Book book = givenSavedBook("9782070368228", 2, 0);
+        // When / Then : la contrainte de base est conservée
+        assertThatThrownBy(() -> jdbc.update("UPDATE book SET available_copies = -1 WHERE id = ?", book.getId().value()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_book_available_copies_range");
+        assertThat(availableCopiesOf(book)).isZero();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void migration_quandEcritureDirecteAuDessusDuTotal_alorsRefuseParCkBookAvailableCopiesRange() {
+        // Given
+        Book book = givenSavedBook("9782070368228", 2, 2);
+        // When / Then : total_copies + 1
+        assertThatThrownBy(() -> jdbc.update("UPDATE book SET available_copies = 3 WHERE id = ?", book.getId().value()))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_book_available_copies_range");
+        assertThat(availableCopiesOf(book)).isEqualTo(2);
+    }
+
+    @Test
+    void loadByIds_quandTroisIdentifiants_alorsTroisLivresEnUneSeuleRequeteSql() {
+        // Given
+        Book a = givenSavedBook("9782070368228", 1, 1);
+        Book b = givenSavedBook("9782070368235", 1, 0);
+        Book c = givenSavedBook("9782070368242", 2, 1);
+        givenSavedBook("9782070368259", 1, 1);
+        entityManager.flush();
+        entityManager.clear();
+        var statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
+        // When
+        List<Book> result = adapter.loadByIds(Set.of(a.getId(), b.getId(), c.getId()));
+        // Then : RM-LOAN-32, une seule requête WHERE id IN (...), livres épuisés inclus
+        assertThat(result).extracting(Book::getId).containsExactlyInAnyOrder(a.getId(), b.getId(), c.getId());
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
+    }
+
+    @Test
+    void loadByIds_quandIdentifiantsInconnus_alorsAbsentsDuResultat() {
+        // Given
+        Book a = givenSavedBook("9782070368228", 1, 1);
+        // When
+        List<Book> result = adapter.loadByIds(Set.of(a.getId(), BookId.newId()));
+        // Then
+        assertThat(result).extracting(Book::getId).containsExactly(a.getId());
     }
 }

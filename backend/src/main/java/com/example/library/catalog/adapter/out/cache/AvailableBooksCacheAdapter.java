@@ -3,11 +3,13 @@ package com.example.library.catalog.adapter.out.cache;
 import java.time.Duration;
 import java.util.List;
 
+import com.example.library.catalog.application.port.out.ChangeAvailableCopiesPort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPagePort;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.application.port.out.SaveBookPort;
 import com.example.library.catalog.domain.model.AvailableBooksLimit;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.SearchText;
 import org.slf4j.Logger;
@@ -29,13 +31,19 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * La clé est supprimée après le commit d'un enregistrement (RC-13).
  *
  * <p>RM-CAT-42 : ce décorateur implémente tout port d'écriture annoté {@code @AffectsAvailableBooks}
- * (aujourd'hui {@link SaveBookPort}) et appelle {@code evictAfterCommit()} après avoir délégué ; les autres modules
- * (ex. {@code loan}) passent par {@code catalog.api}, jamais par le cache. Les pages sans recherche qui tiennent dans
- * la tête de liste sont servies par la même clé ; le total n'est jamais mis en cache.
+ * (aujourd'hui {@link SaveBookPort} et {@link ChangeAvailableCopiesPort}, cette dernière appelée à chaque emprunt et
+ * retour) et appelle {@code evictAfterCommit()} après avoir délégué, seulement si une ligne a été modifiée ; les
+ * autres modules (ex. {@code loan}) passent par {@code catalog.api}, jamais par le cache. Les pages sans recherche
+ * qui tiennent dans la tête de liste sont servies par la même clé ; le total n'est jamais mis en cache.
+ *
+ * <p>Dette technique (décision D6 du module loan) : ce décorateur compte désormais 6 dépendances, au-delà du seuil
+ * de 5 du socle. À refondre (issue : « Refondre le décorateur de cache du catalogue (dépendances &gt; 5) »),
+ * par exemple en regroupant les ports de lecture ou d'écriture, pour revenir à 5 dépendances au plus.
  */
 @Component
 @Primary
-class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailableBooksPagePort, SaveBookPort {
+class AvailableBooksCacheAdapter
+        implements LoadAvailableBooksPort, LoadAvailableBooksPagePort, SaveBookPort, ChangeAvailableCopiesPort {
 
     static final String KEY = "library:catalog:available-books:v1";
     static final int CACHED_SIZE = AvailableBooksLimit.MAX;
@@ -65,6 +73,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailabl
     private final LoadAvailableBooksPort persistentLoad;
     private final LoadAvailableBooksPagePort persistentPageLoad;
     private final SaveBookPort persistentSave;
+    private final ChangeAvailableCopiesPort persistentChange;
     private final StringRedisTemplate redis;
     private final Duration ttl;
     private final AvailableBooksCacheCodec codec = new AvailableBooksCacheCodec();
@@ -73,6 +82,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailabl
             @Qualifier("bookPersistenceAdapter") LoadAvailableBooksPort persistentLoad,
             @Qualifier("bookPersistenceAdapter") LoadAvailableBooksPagePort persistentPageLoad,
             @Qualifier("bookPersistenceAdapter") SaveBookPort persistentSave,
+            @Qualifier("bookPersistenceAdapter") ChangeAvailableCopiesPort persistentChange,
             StringRedisTemplate redis,
             @Value("${app.cache.ttl.default}") Duration ttl) {
         if (ttl == null || ttl.isZero() || ttl.isNegative()) {
@@ -81,6 +91,7 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailabl
         this.persistentLoad = persistentLoad;
         this.persistentPageLoad = persistentPageLoad;
         this.persistentSave = persistentSave;
+        this.persistentChange = persistentChange;
         this.redis = redis;
         this.ttl = ttl;
     }
@@ -127,6 +138,24 @@ class AvailableBooksCacheAdapter implements LoadAvailableBooksPort, LoadAvailabl
     public void save(Book book) {
         persistentSave.save(book);
         evictAfterCommit();
+    }
+
+    @Override
+    public boolean decrementAvailableCopies(BookId id) {
+        boolean changed = persistentChange.decrementAvailableCopies(id);
+        if (changed) {
+            evictAfterCommit();
+        }
+        return changed;
+    }
+
+    @Override
+    public boolean incrementAvailableCopies(BookId id) {
+        boolean changed = persistentChange.incrementAvailableCopies(id);
+        if (changed) {
+            evictAfterCommit();
+        }
+        return changed;
     }
 
     /**

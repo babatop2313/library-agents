@@ -20,6 +20,7 @@ import com.example.library.catalog.application.fake.InMemoryBookRepository;
 import com.example.library.catalog.application.port.out.LoadAvailableBooksPort;
 import com.example.library.catalog.domain.exception.IsbnAlreadyExistsException;
 import com.example.library.catalog.domain.model.Book;
+import com.example.library.catalog.domain.model.BookId;
 import com.example.library.catalog.domain.model.SearchText;
 import com.example.library.catalog.domain.model.CatalogPageRequest;
 import com.example.library.catalog.domain.model.Isbn;
@@ -93,7 +94,7 @@ class AvailableBooksCacheAdapterTest {
             return null;
         });
         database = new InMemoryBookRepository();
-        adapter = new AvailableBooksCacheAdapter(database, database, database, redis, TTL);
+        adapter = new AvailableBooksCacheAdapter(database, database, database, database, redis, TTL);
     }
 
     @AfterEach
@@ -302,7 +303,7 @@ class AvailableBooksCacheAdapterTest {
     @Test
     void loadAvailableBooks_quandCleExpiree_alorsRelueEnBaseEtNouveauTtl() {
         // Given : un TTL très court pour ce test
-        adapter = new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ofSeconds(1));
+        adapter = new AvailableBooksCacheAdapter(database, database, database, database, redis, Duration.ofSeconds(1));
         givenBooksInDatabase(2);
         adapter.loadAvailableBooks(10);
         await().atMost(Duration.ofSeconds(10)).until(() -> !Boolean.TRUE.equals(redis.hasKey(KEY)));
@@ -319,7 +320,7 @@ class AvailableBooksCacheAdapterTest {
         // Given : un port de base simulé (le fake refuserait une limite hors 1 à 20)
         LoadAvailableBooksPort persistence = mock(LoadAvailableBooksPort.class);
         when(persistence.loadAvailableBooks(anyInt())).thenReturn(List.of(book(1)));
-        AvailableBooksCacheAdapter outOfContract = new AvailableBooksCacheAdapter(persistence, database, database, redis, TTL);
+        AvailableBooksCacheAdapter outOfContract = new AvailableBooksCacheAdapter(persistence, database, database, database, redis, TTL);
         // When
         List<Book> tooBig = outOfContract.loadAvailableBooks(25);
         List<Book> zero = outOfContract.loadAvailableBooks(0);
@@ -334,11 +335,11 @@ class AvailableBooksCacheAdapterTest {
     @Test
     void constructeur_quandTtlNulOuNegatif_alorsIllegalStateException() {
         // Given / When / Then : RC-07
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ZERO))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, database, redis, Duration.ZERO))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, Duration.ofSeconds(-1)))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, database, redis, Duration.ofSeconds(-1)))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, redis, null))
+        assertThatThrownBy(() -> new AvailableBooksCacheAdapter(database, database, database, database, redis, null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -425,6 +426,160 @@ class AvailableBooksCacheAdapterTest {
         assertThat(stats).isNotNull();
         assertThat(stats.stringPropertyNames()).contains("cmdstat_get", "cmdstat_set", "cmdstat_del")
                 .doesNotContain("cmdstat_keys", "cmdstat_scan");
+    }
+
+    // -------------------------------------- écriture de disponibilité (emprunt, retour : RM-LOAN-16, RM-CAT-42)
+
+    private Book givenPartialBook(int total, int available) {
+        Book book = Book.restore(BookId.newId(), Isbn.of("9780000009001"), "Livre partiel", "Auteur", total, available);
+        database.givenExisting(book);
+        return book;
+    }
+
+    @Test
+    void decrementAvailableCopies_quandAucuneTransaction_alorsTrueEtCleSupprimeeImmediatement() {
+        // Given : une liste en cache
+        givenBooksInDatabase(2);
+        adapter.loadAvailableBooks(10);
+        assertThat(redis.hasKey(KEY)).isTrue();
+        Book target = database.all().get(0);
+        // When
+        boolean changed = adapter.decrementAvailableCopies(target.getId());
+        // Then : la base délègue (un exemplaire en moins) et la clé est supprimée
+        assertThat(changed).isTrue();
+        assertThat(database.find(target.getIsbn()).getAvailableCopies()).isEqualTo(1);
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandSynchronisationActive_alorsCleConserveeJusquAuCommitPuisSupprimee() {
+        // Given
+        givenBooksInDatabase(2);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When : prise d'un exemplaire dans une transaction non encore validée
+        boolean changed = adapter.decrementAvailableCopies(database.all().get(0).getId());
+        // Then : la clé reste tant que le commit n'a pas eu lieu
+        assertThat(changed).isTrue();
+        assertThat(redis.hasKey(KEY)).isTrue();
+        TransactionSynchronizationUtils.triggerAfterCommit();
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandSynchronisationPuisRollback_alorsCleConservee() {
+        // Given
+        givenBooksInDatabase(2);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When : la transaction est annulée (afterCompletion seul, sans afterCommit)
+        adapter.decrementAvailableCopies(database.all().get(0).getId());
+        TransactionSynchronizationUtils.triggerAfterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+        // Then
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandAucuneLigneModifieeSansTransaction_alorsFauxEtCleConservee() {
+        // Given : un livre sans exemplaire disponible, liste en cache
+        givenBooksInDatabase(2);
+        Book soldOut = givenPartialBook(2, 0);
+        adapter.loadAvailableBooks(10);
+        // When
+        boolean changed = adapter.decrementAvailableCopies(soldOut.getId());
+        // Then : rien n'a changé, donc rien à invalider
+        assertThat(changed).isFalse();
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void decrementAvailableCopies_quandAucuneLigneModifieeDansTransaction_alorsFauxEtAucuneSynchronisation() {
+        // Given
+        givenBooksInDatabase(2);
+        Book soldOut = givenPartialBook(2, 0);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When
+        boolean changed = adapter.decrementAvailableCopies(soldOut.getId());
+        // Then : même après le commit, la clé est conservée
+        assertThat(changed).isFalse();
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        TransactionSynchronizationUtils.triggerAfterCommit();
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void incrementAvailableCopies_quandAucuneTransaction_alorsTrueEtCleSupprimeeImmediatement() {
+        // Given : un livre dont un exemplaire est emprunté, liste en cache
+        givenBooksInDatabase(2);
+        Book borrowed = givenPartialBook(2, 1);
+        adapter.loadAvailableBooks(10);
+        assertThat(redis.hasKey(KEY)).isTrue();
+        // When
+        boolean changed = adapter.incrementAvailableCopies(borrowed.getId());
+        // Then
+        assertThat(changed).isTrue();
+        assertThat(database.find(borrowed.getIsbn()).getAvailableCopies()).isEqualTo(2);
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void incrementAvailableCopies_quandSynchronisationActive_alorsCleConserveeJusquAuCommitPuisSupprimee() {
+        // Given
+        givenBooksInDatabase(2);
+        Book borrowed = givenPartialBook(2, 0);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When
+        boolean changed = adapter.incrementAvailableCopies(borrowed.getId());
+        // Then
+        assertThat(changed).isTrue();
+        assertThat(redis.hasKey(KEY)).isTrue();
+        TransactionSynchronizationUtils.triggerAfterCommit();
+        assertThat(redis.hasKey(KEY)).isFalse();
+    }
+
+    @Test
+    void incrementAvailableCopies_quandSynchronisationPuisRollback_alorsCleConservee() {
+        // Given
+        givenBooksInDatabase(2);
+        Book borrowed = givenPartialBook(2, 1);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When
+        adapter.incrementAvailableCopies(borrowed.getId());
+        TransactionSynchronizationUtils.triggerAfterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+        // Then
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void incrementAvailableCopies_quandTousExemplairesDisponibles_alorsFauxEtCleConservee() {
+        // Given : livre complet (rien à restituer), liste en cache
+        givenBooksInDatabase(2);
+        adapter.loadAvailableBooks(10);
+        Book full = database.all().get(0);
+        // When
+        boolean changed = adapter.incrementAvailableCopies(full.getId());
+        // Then
+        assertThat(changed).isFalse();
+        assertThat(database.find(full.getIsbn()).getAvailableCopies()).isEqualTo(2);
+        assertThat(redis.hasKey(KEY)).isTrue();
+    }
+
+    @Test
+    void incrementAvailableCopies_quandAucuneLigneModifieeDansTransaction_alorsAucuneInvalidationApresCommit() {
+        // Given
+        givenBooksInDatabase(2);
+        adapter.loadAvailableBooks(10);
+        TransactionSynchronizationManager.initSynchronization();
+        // When
+        boolean changed = adapter.incrementAvailableCopies(database.all().get(0).getId());
+        // Then
+        assertThat(changed).isFalse();
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        TransactionSynchronizationUtils.triggerAfterCommit();
+        assertThat(redis.hasKey(KEY)).isTrue();
     }
 
     // ------------------------------------------------- pages du catalogue (RM-CAT-24)

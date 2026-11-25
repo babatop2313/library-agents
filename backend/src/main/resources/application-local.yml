@@ -3,3 +3,9 @@ spring:
   data:
     redis:
       password: ""   # Redis local sans mot de passe : évite de définir REDIS_PASSWORD en local. Jamais hors poste de dev.
+
+app:
+  dev:
+    member:          # membre de test (rôle MEMBER) créé au démarrage s'il n'existe pas ; un défaut vide vaut absence
+      email: ${DEV_MEMBER_EMAIL:}
+      password: ${DEV_MEMBER_PASSWORD:}
