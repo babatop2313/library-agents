@@ -75,7 +75,10 @@ public class SecurityConfig {
                 if (local) {
                     auth.requestMatchers(HttpMethod.POST, "/dev/token").permitAll();   // n'existe qu'avec le profil "local" (RM-AUTH-12)
                 }
+                // Emprunts : MEMBER uniquement, évalué avant la validation du corps et la résolution du sub
+                // (un LIBRARIAN seul reçoit 403 avant tout 400 ; @PreAuthorize n'est évalué qu'après les arguments)
                 auth.requestMatchers(HttpMethod.POST, "/api/v1/books").hasRole("LIBRARIAN")
+                    .requestMatchers("/api/v1/loans", "/api/v1/loans/**").hasRole("MEMBER")
                     .anyRequest().authenticated();
             })
             .oauth2ResourceServer(oauth2 -> oauth2

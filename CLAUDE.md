@@ -5,7 +5,9 @@
 
 ## Contexte
 - Application : gestion d'une bibliothèque qui prête des livres à ses membres (projet bac à sable de la Claude Factory).
-- Modules prévus : `catalog` (livres, exemplaires) et `loan` (emprunts).
+- Modules : `catalog` (livres, exemplaires), `loan` (emprunts) et `identity` (comptes, connexion).
+  `loan` appelle `catalog` uniquement par `catalog.api.CatalogApi` ; les dates des emprunts sont calculées dans le
+  fuseau `APP_TIMEZONE`. Contrat : `docs/api/loan.md` ; plan : `docs/specs/loan-plan.md`.
 - Langue du code : anglais. Langue des commentaires métier, specs et messages de commit : français.
 - Langue des échanges avec Claude : français.
 
@@ -19,6 +21,10 @@
 | RM-05 | Un livre rendu redevient disponible ; on ne rend pas deux fois le même emprunt. |
 | RM-06 | Un emprunt peut être prolongé une seule fois de 7 jours, s'il n'est pas en retard. |
 | RM-07 | L'ISBN d'un livre est unique et valide (13 chiffres). |
+
+Emprunts : ordre des refus 404 livre inconnu, 409 retard, limite de 3, livre déjà emprunté, plus d'exemplaire.
+La limite est sérialisée par membre (verrou consultatif PostgreSQL de transaction) ; le stock par mise à jour SQL
+conditionnelle. Les cas attendus de `catalog.api` sont des résultats, jamais des exceptions (transaction partagée).
 
 ## Stack
 - Backend : Java 21, **Spring Boot 4.1**, Spring Security (resource server JWT HS256), Spring Data JPA, Flyway, PostgreSQL, ArchUnit
@@ -48,6 +54,8 @@ docs/specs/                                ← une spec par fonctionnalité
 - JWT signé HS256 (`JWT_SECRET`), rôles dans la claim `roles` → `ROLE_<rôle>`.
 - Rôles : `LIBRARIAN` (gère le catalogue), `MEMBER` (emprunte).
 - L'identifiant du membre connecté = `sub` du JWT (`@AuthenticationPrincipal Jwt jwt` → `jwt.getSubject()`).
+  Emprunts (`/api/v1/loans/**`) : rôle `MEMBER` exigé (403 pour un `LIBRARIAN` seul) ; membre lu via `@CurrentMember`,
+  jamais dans le corps ; `sub` non UUID = 401. Refus métier = 409, livre ou emprunt introuvable = 404.
 - Connexion : `POST /api/v1/auth/login` (e-mail + mot de passe) ; `GET /api/v1/auth/me` ; `POST /api/v1/auth/logout`.
 - Transport du jeton (navigateur) : cookie `ACCESS_TOKEN` `HttpOnly; Secure; SameSite=Strict; Path=/api`,
   jamais dans le corps ni lisible par JavaScript. Les clients non navigateurs envoient `Authorization: Bearer`
@@ -71,6 +79,11 @@ docs/specs/                                ← une spec par fonctionnalité
 - Amorçage du premier bibliothécaire (au démarrage, seulement si aucun `LIBRARIAN` n'existe) :
   `BOOTSTRAP_LIBRARIAN_EMAIL`, `BOOTSTRAP_LIBRARIAN_PASSWORD` (12 caractères minimum), dans `.env`.
   Aucune valeur par défaut, ni dans `application.yml` ni dans le code ; absentes = aucun compte créé (WARN).
+- Fuseau de la bibliothèque : `APP_TIMEZONE` (défaut `Africa/Dakar`, non secret) ; il définit « la date du jour »
+  des emprunts. Une valeur inconnue empêche le démarrage.
+- Membre de test (profil `local` uniquement, rôle `MEMBER`) : `DEV_MEMBER_EMAIL`, `DEV_MEMBER_PASSWORD`
+  (12 caractères minimum), dans `.env`. Défaut **vide** dans `application-local.yml` seulement ; absents = aucun
+  compte créé (WARN).
 
 ## Commandes
 | Action | Commande |

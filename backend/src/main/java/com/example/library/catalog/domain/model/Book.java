@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import com.example.library.catalog.domain.exception.AvailableCopiesOverflowException;
 import com.example.library.catalog.domain.exception.InvalidBookException;
+import com.example.library.catalog.domain.exception.NoCopyAvailableException;
 
 /** Livre du catalogue, avec un compteur d'exemplaires (total / disponibles). */
 public final class Book {
@@ -71,6 +73,32 @@ public final class Book {
     /** RM-04 : un livre est empruntable s'il reste au moins un exemplaire disponible. */
     public boolean isAvailable() {
         return availableCopies >= 1;
+    }
+
+    /**
+     * RM-04 : prise d'un exemplaire (emprunt). Renvoie un nouveau livre avec un exemplaire disponible de moins ;
+     * le livre courant reste inchangé.
+     *
+     * @throws NoCopyAvailableException s'il ne reste aucun exemplaire disponible
+     */
+    public Book takeCopy() {
+        if (!isAvailable()) {
+            throw new NoCopyAvailableException(id);
+        }
+        return new Book(id, isbn, title, author, totalCopies, availableCopies - 1);
+    }
+
+    /**
+     * Restitution d'un exemplaire (retour). Renvoie un nouveau livre avec un exemplaire disponible de plus,
+     * sans jamais dépasser le total.
+     *
+     * @throws AvailableCopiesOverflowException si tous les exemplaires sont déjà disponibles (incohérence de données)
+     */
+    public Book returnCopy() {
+        if (availableCopies >= totalCopies) {
+            throw new AvailableCopiesOverflowException(id);
+        }
+        return new Book(id, isbn, title, author, totalCopies, availableCopies + 1);
     }
 
     public BookId getId() { return id; }

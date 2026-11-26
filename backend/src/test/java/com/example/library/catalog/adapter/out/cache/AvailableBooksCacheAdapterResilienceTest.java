@@ -138,7 +138,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         // Given : Redis ne répond pas du tout
         LettuceConnectionFactory factory = unreachableRedis();
         try {
-            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database,
+            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database,
                     new StringRedisTemplate(factory), TTL);
             // When
             List<Book> result = adapter.loadAvailableBooks(10);
@@ -158,7 +158,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         // Given
         LettuceConnectionFactory factory = unreachableRedis();
         try {
-            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database,
+            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database,
                     new StringRedisTemplate(factory), TTL);
             // When : aucune exception ne sort, le livre est en base
             adapter.save(book(99));
@@ -176,7 +176,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         // Given : une transaction simulée
         LettuceConnectionFactory factory = unreachableRedis();
         try {
-            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database,
+            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database,
                     new StringRedisTemplate(factory), TTL);
             TransactionSynchronizationManager.initSynchronization();
             adapter.save(book(99));
@@ -199,7 +199,7 @@ class AvailableBooksCacheAdapterResilienceTest {
             LettuceConnectionFactory factory = factory(container.getHost(), container.getMappedPort(6379),
                     ClientOptions.DisconnectedBehavior.REJECT_COMMANDS);
             try {
-                AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database,
+                AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database,
                         new StringRedisTemplate(factory), TTL);
                 adapter.loadAvailableBooks(10); // établit la connexion et remplit le cache
                 container.stop();
@@ -253,7 +253,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenThrow(error);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooks(10);
         // Then : D10, repli sur la base, aucune écriture, WARN sans le message de l'erreur
@@ -271,7 +271,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenReturn("pas du json MARQUEUR-VALEUR");
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooks(10);
         // Then : RC-11, remplacement une seule fois, valeur absente des logs
@@ -298,7 +298,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenReturn(value);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         adapter.loadAvailableBooks(10);
         // Then : RC-18, le WARN porte le motif du codec, jamais la valeur lue
@@ -312,7 +312,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenReturn(null);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooks(10);
         // Then : absence normale, pas de WARN
@@ -329,7 +329,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         when(operations.get(KEY)).thenReturn(null);
         doThrow(new QueryTimeoutException("MARQUEUR-MESSAGE")).when(operations)
                 .set(eq(KEY), anyString(), any(Duration.class));
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooks(10);
         // Then : RC-12, une seule tentative, WARN d'écriture, la requête réussit
@@ -345,7 +345,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenReturn("[]");
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooks(10);
         // Then
@@ -359,13 +359,62 @@ class AvailableBooksCacheAdapterResilienceTest {
         // Given
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         when(template.delete(KEY)).thenThrow(new QueryTimeoutException("MARQUEUR-MESSAGE"));
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         adapter.save(book(99));
         // Then : RC-15, RC-18
         assertThat(database.all()).hasSize(4);
         assertThat(count(output.getAll(), EVICT_WARN)).isEqualTo(1);
         assertThat(output.getAll()).doesNotContain("MARQUEUR-MESSAGE");
+    }
+
+    @Test
+    void decrementAvailableCopies_quandDeleteEnErreur_alorsResultatConserveEtWarnInvalidation(CapturedOutput output) {
+        // Given : Redis refuse la suppression de la clé après la mise à jour de la base
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        when(template.delete(KEY)).thenThrow(new QueryTimeoutException("MARQUEUR-MESSAGE"));
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
+        Book target = database.all().get(0);
+        // When
+        boolean changed = adapter.decrementAvailableCopies(target.getId());
+        // Then : RC-15, l'erreur de cache n'est jamais propagée, l'emprunt n'est pas perdu
+        assertThat(changed).isTrue();
+        assertThat(database.find(target.getIsbn()).getAvailableCopies()).isEqualTo(1);
+        assertThat(count(output.getAll(), EVICT_WARN)).isEqualTo(1);
+        assertThat(output.getAll()).doesNotContain("MARQUEUR-MESSAGE");
+    }
+
+    @Test
+    void incrementAvailableCopies_quandDeleteEnErreur_alorsResultatConserveEtWarnInvalidation(CapturedOutput output) {
+        // Given : un livre dont un exemplaire est emprunté
+        Book borrowed = Book.restore(com.example.library.catalog.domain.model.BookId.newId(),
+                Isbn.of("9780000009999"), "Emprunté", "Auteur", 2, 1);
+        database.givenExisting(borrowed);
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        when(template.delete(KEY)).thenThrow(new QueryTimeoutException("MARQUEUR-MESSAGE"));
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
+        // When
+        boolean changed = adapter.incrementAvailableCopies(borrowed.getId());
+        // Then
+        assertThat(changed).isTrue();
+        assertThat(database.find(borrowed.getIsbn()).getAvailableCopies()).isEqualTo(2);
+        assertThat(count(output.getAll(), EVICT_WARN)).isEqualTo(1);
+        assertThat(output.getAll()).doesNotContain("MARQUEUR-MESSAGE");
+    }
+
+    @Test
+    void decrementAvailableCopies_quandAucuneLigneModifiee_alorsAucuneInvalidationTentee() {
+        // Given : un livre sans exemplaire disponible ; un template dont aucun appel n'est attendu
+        Book soldOut = Book.restore(com.example.library.catalog.domain.model.BookId.newId(),
+                Isbn.of("9780000009998"), "Épuisé", "Auteur", 2, 0);
+        database.givenExisting(soldOut);
+        StringRedisTemplate template = mock(StringRedisTemplate.class);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
+        // When
+        boolean changed = adapter.decrementAvailableCopies(soldOut.getId());
+        // Then
+        assertThat(changed).isFalse();
+        verifyNoInteractions(template);
     }
 
     // ------------------------------------------------- pages du catalogue (RM-CAT-24)
@@ -378,7 +427,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenThrow(error);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         CatalogPageRequest request = new CatalogPageRequest(0, 10);
         // When
         List<Book> result = adapter.loadAvailableBooksPage(SearchText.NONE, request);
@@ -393,7 +442,7 @@ class AvailableBooksCacheAdapterResilienceTest {
     void loadAvailableBooksPage_quandRecherche_alorsRedisJamaisSollicite() {
         // Given : un template dont aucun appel n'est attendu
         StringRedisTemplate template = mock(StringRedisTemplate.class);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         List<Book> result = adapter.loadAvailableBooksPage(SearchText.of("livre"), new CatalogPageRequest(0, 10));
         // Then
@@ -405,7 +454,7 @@ class AvailableBooksCacheAdapterResilienceTest {
     void loadAvailableBooksPage_quandPageProfonde_alorsRedisJamaisSollicite() {
         // Given
         StringRedisTemplate template = mock(StringRedisTemplate.class);
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         // When
         adapter.loadAvailableBooksPage(SearchText.NONE, new CatalogPageRequest(2, 10));
         // Then
@@ -418,7 +467,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         // Given : Redis ne répond pas du tout
         LettuceConnectionFactory factory = unreachableRedis();
         try {
-            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database,
+            AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database,
                     new StringRedisTemplate(factory), TTL);
             CatalogPageRequest request = new CatalogPageRequest(0, 10);
             // When
@@ -437,7 +486,7 @@ class AvailableBooksCacheAdapterResilienceTest {
         StringRedisTemplate template = mock(StringRedisTemplate.class);
         ValueOperations<String, String> operations = operationsOf(template);
         when(operations.get(KEY)).thenReturn("pas du json");
-        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, template, TTL);
+        AvailableBooksCacheAdapter adapter = new AvailableBooksCacheAdapter(database, database, database, database, template, TTL);
         CatalogPageRequest request = new CatalogPageRequest(0, 2);
         // When
         List<Book> result = adapter.loadAvailableBooksPage(SearchText.NONE, request);
