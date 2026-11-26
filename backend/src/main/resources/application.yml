@@ -1,12 +1,17 @@
 spring:
   config:
+    # .env lu s'il existe. Priorité décroissante : variables d'environnement et propriétés système,
+    # puis ../.env (racine du dépôt, importé en dernier donc prioritaire), puis backend/.env.
+    # Emplacement recommandé : un seul .env, à la racine du dépôt.
+    # Dossier de travail attendu : backend/ (./mvnw spring-boot:run) ; lancée depuis la racine,
+    # l'application lirait ../.env hors du dépôt.
     import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
   application:
     name: library
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/library}
-    username: ${DB_USER:postgres}          # secret : aucune valeur par défaut, démarrage refusé si absent
-    password: ${DB_PASSWORD:postgres}      # secret : aucune valeur par défaut, démarrage refusé si absent
+    username: ${DB_USER}        # secret : aucune valeur par défaut, démarrage refusé si absent
+    password: ${DB_PASSWORD}    # secret : aucune valeur par défaut, démarrage refusé si absent
   jpa:
     open-in-view: false
     hibernate:
@@ -53,15 +58,15 @@ app:
   timezone: ${APP_TIMEZONE:Africa/Dakar}   # fuseau de la bibliothèque : définit « la date du jour » des emprunts
   security:
     jwt:
-      secret: ${JWT_SECRET:Les_valeurs_par_defaut_sont_refusees_gardes_ca_Les_valeurs_par_defaut_sont_refusees_gardes_ca}       # secret : aucune valeur par défaut, démarrage refusé si absent ; au moins 32 octets
+      secret: ${JWT_SECRET}     # secret : aucune valeur par défaut, démarrage refusé si absent ; au moins 32 octets
       ttl: ${JWT_TTL:PT1H}        # durée du jeton et du cookie (ISO-8601)
       cookie-name: ACCESS_TOKEN
     bcrypt:
       strength: 10
   bootstrap:
     librarian:                    # premier bibliothécaire créé au démarrage s'il n'en existe aucun ; jamais de valeur par défaut
-      email: ${BOOTSTRAP_LIBRARIAN_EMAIL:admin@yomail.com}
-      password: ${BOOTSTRAP_LIBRARIAN_PASSWORD:P@sser123P@sser123}
+      email: ${BOOTSTRAP_LIBRARIAN_EMAIL:}
+      password: ${BOOTSTRAP_LIBRARIAN_PASSWORD:}
   cache:
     ttl:
       default: 10m                # TTL obligatoire sur chaque clé Redis, par type de donnée si besoin
