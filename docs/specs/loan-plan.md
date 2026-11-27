@@ -217,7 +217,7 @@ Traductions de `LoanExceptionHandler` :
 |---|---|
 | `loans.routes.ts` | `LOANS_ROUTES = [{ path: '', loadComponent: () => import('./pages/my-loans/my-loans').then(m => m.MyLoans) }]` |
 | `data/loans.model.ts` | `CurrentLoan { id: string; bookId: string; isbn: string \| null; title: string \| null; author: string \| null; borrowedOn: string; dueOn: string; overdue: boolean }` ; `MAX_ACTIVE_LOANS = 3` (affichage du compteur seulement, point C.9) |
-| `data/loans.service.ts` | Seul accès HTTP de la feature : `listMine()` → `GET /api/v1/loans` ; `giveBack(id)` → `POST /api/v1/loans/{id}/return` avec `{ context: skipErrorToast(404, 409, 503) }` |
+| `data/loans.service.ts` | Seul accès HTTP de la feature : `listMine()` → `GET /api/v1/loans` ; `giveBack(id)` → `POST /api/v1/loans/{id}/return` avec `{ context: skipErrorToast(404, 409) }` |
 | `data/return-errors.ts` | `LOAN_ALREADY_RETURNED` → « Cet emprunt est déjà rendu » ; `LOAN_NOT_FOUND` → « Emprunt introuvable » |
 | `pages/my-loans/my-loans.ts` / `.html` / `.scss` | Page routée, `providers: [ConfirmationService]`, `<p-confirmdialog />` dans le gabarit. Détail ci-dessous. (RM-LOAN-24 à 26) |
 | `ui/loan-table/loan-table.ts` / `.html` / `.scss` | Entrées `loans`, `status`, `returningId`, `retrying` ; sorties `giveBack: CurrentLoan` et `retry`. Détail ci-dessous. |
@@ -234,7 +234,7 @@ Comportement de la page `my-loans` :
 - 403, 5xx, réseau : toast de l'`errorInterceptor`.
 
 Composant `loan-table` :
-- `p-table` (caption masquée « Mes emprunts en cours »). Colonnes : Titre, Auteur, ISBN, Emprunté le, À rendre au plus tard le, Statut, action. Sous `md` : auteur, ISBN et dates passent en sous-lignes, comme dans le catalogue.
+- `p-table` (caption masquée « Mes emprunts en cours »). Colonnes : Titre, Auteur, ISBN, Emprunté le, À rendre avant, Statut, action. Sous `md` : auteur, ISBN et dates passent en sous-lignes, comme dans le catalogue.
 - Statut : `p-tag` « En cours » (`info`) ou « En retard » (`danger`, icône `pi pi-exclamation-circle`). Le texte porte l'information, pas seulement la couleur.
 - Titre nul : « Livre indisponible ».
 - Bouton `p-button` secondaire contour « Rendre » (`ariaLabel` « Rendre {titre} »), `[loading]` sur la ligne en cours, désactivé si un retour est en cours.
@@ -247,9 +247,9 @@ Une feature n'importe pas une autre. L'appel d'emprunt passe donc par le service
 | Fichier | Modification |
 |---|---|
 | `data/catalogue.model.ts` | `BorrowBookRequest { bookId: string }`, `LoanCreated { id: string; bookId: string; borrowedOn: string; dueOn: string }` |
-| `data/catalogue.service.ts` | `borrow(bookId)` → `POST /api/v1/loans` avec `{ context: skipErrorToast(404, 409, 503) }` |
+| `data/catalogue.service.ts` | `borrow(bookId)` → `POST /api/v1/loans` avec `{ context: skipErrorToast(404, 409) }` |
 | `data/borrow-errors.ts` | Codes → messages de RM-LOAN-22 |
-| `pages/catalogue/catalogue.ts` / `.html` | `canBorrow = computed(() => auth.hasRole('MEMBER'))`, `borrowingId = signal<string \| null>(null)`. `borrow(book)` : rien si un emprunt est en cours (double clic = une requête). Succès : toast `success` « Livre emprunté », détail « À rendre au plus tard le {formatIsoDate(dueOn)}. », puis `reload$.next()` (page et `q` conservés ; la redirection existante vers la dernière page s'applique si la page se vide). 409 : toast `warn` avec le message du code ; `BOOK_NOT_AVAILABLE` recharge aussi la liste (point C.8). 404 `BOOK_NOT_FOUND` : toast « Ce livre n'existe plus », puis rechargement. |
+| `pages/catalogue/catalogue.ts` / `.html` | `canBorrow = computed(() => auth.hasRole('MEMBER'))`, `borrowingId = signal<string \| null>(null)`. `borrow(book)` : rien si un emprunt est en cours (double clic = une requête). Succès : toast `success` « Livre emprunté », détail « À rendre avant le {formatIsoDate(dueOn)}. », puis `reload$.next()` (page et `q` conservés ; la redirection existante vers la dernière page s'applique si la page se vide). 409 : toast `warn` avec le message du code ; `BOOK_NOT_AVAILABLE` recharge aussi la liste (point C.8). 404 `BOOK_NOT_FOUND` : toast « Ce livre n'existe plus », puis rechargement. |
 | `ui/book-table/book-table.ts` / `.html` / `.scss` | Entrées `canBorrow` et `borrowingId` ; sortie `borrow: Book`. Si `canBorrow` : colonne d'action (en-tête masqué « Action »), `p-button` « Emprunter » secondaire contour, petit, `ariaLabel` « Emprunter {titre} », `[loading]` sur la ligne, `[disabled]` pendant tout emprunt. Le `colspan` des états vides devient `4 + (canBorrow ? 1 : 0)`. |
 
 ### 6.4 Mode `mock` (RM-LOAN-27)
@@ -365,7 +365,6 @@ Il suit l'ordre de la référence. Dans chaque couche, catalog passe avant loan.
 | D10 | Ordre du code | **Backend d'abord**, puis frontend directement sur la vraie API. |
 | D11 | Revue backend (2026-11-25) : dépendances de `BorrowBookService` | Fusion de `CheckBookExistsPort` dans `LoadBookSummariesPort` : un port de moins, existence vérifiée par la lecture groupée. `BorrowBookService` a **5 ports + `Clock`** ; `Clock`, dépendance d'infrastructure, n'est pas compté dans le seuil de 5 (corrigé le 2026-11-25 : la première rédaction annonçait à tort un « retour à 5 dépendances »). |
 | D12 | Revue backend : délai de verrou dépassé (55P03) | **503 `LOAN_BUSY`** (ProblemDetail), ajouté au contrat. `lockLoansOf` exige une transaction (`MANDATORY`). `sub` accepté seulement en forme canonique d'UUID. |
-| D13 | Design de l'étape 4 (2026-11-26) | Écran `loan-my-loans` (designer de la factory) validé ; décisions A–K reportées dans la spec (décisions 13 à 17) et dans `docs/design/`. Sous `md`, rupture intermédiaire 768–991 px ajoutée. 503 `LOAN_BUSY` : toast `warn` géré par l'écran (emprunt et retour). |
 
 ## Dette technique
 - `AvailableBooksCacheAdapter` : 6 dépendances (seuil du socle : 5) après l'ajout de `ChangeAvailableCopiesPort`. Issue à créer : « Refondre le décorateur de cache du catalogue (dépendances > 5) ».
@@ -375,5 +374,5 @@ Ordre : backend d'abord
 | Partie | État | Branche |
 |---|---|---|
 | Backend | terminé — 2026-11-25 | feature/loan |
-| Frontend | terminé — 2026-11-27 | feature/loan |
-Design : « Mes emprunts » (`loan-my-loans`) par le designer de la factory, validé le 2026-11-26 ; bouton « Emprunter » du catalogue, confirmation du retour et lien d'en-tête sans design dédié (design system + fiche `catalogue-list`, section « Évolution loan »).
+| Frontend | à faire | feature/loan |
+Design : <rempli à l'étape 4>
