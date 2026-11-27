@@ -22,6 +22,17 @@
       "spec": "screens/catalogue-register-dialog.md",
       "mockup": "mockups/catalogue-register-dialog.html",
       "updated": "2026-11-23"
+    },
+    {
+      "id": "loan-my-loans",
+      "title": "Mes emprunts",
+      "feature": "loan",
+      "status": "intégré",
+      "source": "factory",
+      "link": "",
+      "spec": "screens/loan-my-loans.md",
+      "mockup": "mockups/loan-my-loans.html",
+      "updated": "2026-11-26"
     }
   ]
 }

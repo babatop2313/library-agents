@@ -2,6 +2,9 @@
 
 > Statut : **validé** le 2026-11-23 avec deux remarques intégrées : palette primaire plus moderne (violet, en-tête en
 > dégradé violet → fuchsia) et icônes vectorielles modernes uniquement (aucun emoji ni caractère en guise d'icône).
+> Complété et validé le 2026-11-26 (écran « Mes emprunts ») : surcharge des textes `warn` / `success` pour le contraste
+> AA, badges d'état `info` / `danger`, jeton `--p-red-700`, icône `pi pi-exclamation-circle`, bandeau `p-message`,
+> règles du `p-confirmdialog`.
 > Base : PrimeNG 21, preset **Aura** (`@primeuix/themes/aura`), PrimeIcons ; Bootstrap 5 **grille et utilitaires
 > seulement** (`bootstrap-grid`, `bootstrap-utilities` : pas de reboot, pas de composants Bootstrap).
 > Ce document **précise** le thème Aura, il ne le contredit pas. Les couleurs viennent toutes des palettes d'Aura ;
@@ -28,8 +31,9 @@
 | Texte secondaire | `--p-text-muted-color` | `{surface.500}` `#64748b` | aides de saisie, sous-lignes, compteurs |
 | Erreur (texte) | `--p-red-600` | `#dc2626` | messages d'erreur sous les champs (`p-message` simple) |
 | Erreur (bordure) | `--p-form-field-invalid-border-color` | `{red.400}` `#f87171` | champ invalide |
-| Succès | `--p-green-*` | toast `success` d'Aura | confirmation (« Livre enregistré ») |
-| Avertissement | `--p-yellow-*` / `orange` | toast `warn` d'Aura | « Session expirée » (existant) |
+| Succès | `--p-green-*` | toast `success` d'Aura, **texte surchargé** `{green.800}` `#166534` (voir « Surcharge du preset ») | confirmation (« Livre enregistré », « Livre emprunté », « Livre rendu ») |
+| Avertissement | `--p-yellow-*` / `orange` | toast et `p-message` `warn` d'Aura, **texte surchargé** `{yellow.800}` `#854d0e` | « Session expirée » (existant), refus métier, bandeau de retard |
+| Erreur forte (texte) | `--p-red-700` | `#b91c1c` | date d'échéance dépassée (« Mes emprunts »), texte du tag `danger` |
 | Info | `--p-sky-*` | toast `info` d'Aura | non utilisé pour l'instant |
 
 ### Contrastes (AA : 4,5:1 texte normal, 3:1 grands textes et composants)
@@ -44,6 +48,13 @@
 | `#64748b` sur blanc | ≈ 4,8:1 | AA |
 | `#64748b` sur `#f8fafc` | ≈ 4,6:1 | AA (limite : ne pas éclaircir) |
 | `#dc2626` sur blanc | ≈ 4,8:1 | AA |
+| `#b91c1c` (`red.700`) sur blanc | ≈ 6,5:1 | AA |
+| `#ca8a04` (`yellow.600`, `warn` Aura par défaut) sur `#fefce8` | ≈ 2,9:1 | **Échec AA** : remplacé |
+| `#854d0e` (`yellow.800`, `warn` surchargé) sur `#fefce8` | ≈ 7:1 | AAA |
+| `#16a34a` (`green.600`, `success` Aura par défaut) sur `#f0fdf4` | ≈ 3:1 | **Échec AA** : remplacé |
+| `#166534` (`green.800`, `success` surchargé) sur `#f0fdf4` | ≈ 7:1 | AAA |
+| `#0369a1` (tag `info`, `sky.700`) sur `#e0f2fe` | ≈ 5,9:1 | AA |
+| `#b91c1c` (tag `danger`, `red.700`) sur `#fee2e2` | ≈ 5,9:1 | AA |
 
 **Surcharge du preset** (dans `app.config.ts`, à la place de `preset: Aura`) :
 ```ts
@@ -61,8 +72,29 @@ const LibraryPreset = definePreset(Aura, {
       },
     },
   },
+  // Contraste AA (validé le 2026-11-26, écran « Mes emprunts ») : le texte `warn` / `success` d'Aura est sous 4,5:1.
+  // Jetons de la version installée de @primeuix/themes : `message.<sévérité>.color`, `toast.<sévérité>.color` / `detailColor`.
+  components: {
+    message: {
+      warn: { color: 'light-dark({yellow.800}, {yellow.500})' },
+      success: { color: 'light-dark({green.800}, {green.500})' },
+    },
+    toast: {
+      warn: {
+        color: 'light-dark({yellow.800}, {yellow.500})',
+        detailColor: 'light-dark({yellow.800}, {yellow.500})',
+      },
+      success: {
+        color: 'light-dark({green.800}, {green.500})',
+        detailColor: 'light-dark({green.800}, {green.500})',
+      },
+    },
+  },
 });
 ```
+La surcharge `warn` / `success` s'applique à **tous** les toasts et messages de l'application, y compris les toasts
+existants « Livre enregistré » (success) et « Session expirée » (warn). Seul le texte change (`{yellow.800}` et
+`{green.800}` en clair, valeur d'origine en sombre) ; fonds et bordures Aura sont inchangés.
 Le dégradé de l'en-tête est un style de `header.scss` (`background: var(--app-header-bg)`), avec
 `--app-header-bg: linear-gradient(90deg, var(--p-primary-600), var(--p-fuchsia-600))` défini dans `styles.scss`.
 
@@ -112,6 +144,9 @@ Chiffres tabulaires (`font-variant-numeric: tabular-nums`) pour l'ISBN et les ex
 | Notification | `p-toast` unique (racine), `MessageService` | succès bref (3 s) ; erreurs techniques via `errorInterceptor` |
 | Dialogue | `p-dialog [modal]="true"` | formulaire court ; `draggable=false`, `resizable=false`, Échap ferme |
 | Badge de rôle | `p-tag` | existant dans l'en-tête |
+| Badge d'état | `p-tag` | statut d'une ligne : `severity="info"` (`sky.100` / `sky.700`, ex. « En cours ») ; `severity="danger"` (`red.100` / `red.700`, ex. « En retard ») avec icône `pi pi-exclamation-circle` ; le texte porte toujours l'information, jamais la seule couleur |
+| Bandeau d'avertissement | `p-message severity="warn"` | information persistante de page (ex. retard bloquant l'emprunt), non fermable, sans rôle d'alerte s'il est présent dès l'affichage |
+| Confirmation | `p-confirmdialog` | action sur une donnée (ex. « Rendre ») : bouton « Annuler » secondaire `text` à gauche, action principale à droite, focus initial sur « Annuler » (`defaultFocus="reject"`) |
 
 ### Icônes
 - **PrimeIcons uniquement** (`<i class="pi pi-…" aria-hidden="true"></i>` ou propriété `icon` des composants) : icônes
@@ -131,7 +166,9 @@ Chiffres tabulaires (`font-variant-numeric: tabular-nums`) pour l'ISBN et les ex
 | Enregistrer | `pi pi-check` |
 | Toast de succès | `pi pi-check-circle` (icône native du toast `success`) |
 | Erreur de champ, message d'erreur | `pi pi-times-circle` (icône native de `p-message` `error`) |
-| Erreur de chargement | `pi pi-exclamation-triangle` |
+| Erreur de chargement, bandeau et toast d'avertissement | `pi pi-exclamation-triangle` |
+| Tag d'état en retard | `pi pi-exclamation-circle` |
+| Mes emprunts vides, parcourir le catalogue | `pi pi-book` |
 | Réessayer | `pi pi-refresh` |
 | Chargement | `pi pi-spinner` (`pi-spin`) |
 | Se déconnecter | `pi pi-sign-out` |

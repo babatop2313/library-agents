@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -19,6 +19,7 @@ export class Header {
   private readonly router = inject(Router);
 
   protected readonly user = this.auth.user;
+  protected readonly isMember = computed(() => this.auth.hasRole('MEMBER'));
   protected readonly label = roleLabel;
   protected readonly severity = roleSeverity;
 

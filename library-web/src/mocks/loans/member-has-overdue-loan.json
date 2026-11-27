@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Emprunt en retard",
+  "status": 409,
+  "detail": "Vous avez un emprunt en retard : rendez-le avant d'emprunter un autre livre",
+  "instance": "/api/v1/loans",
+  "code": "MEMBER_HAS_OVERDUE_LOAN"
+}

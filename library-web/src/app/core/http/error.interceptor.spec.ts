@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
 
+import { skipErrorToast } from './error-toast.context';
 import { errorInterceptor } from './error.interceptor';
 
 describe('errorInterceptor', () => {
@@ -73,5 +74,39 @@ describe('errorInterceptor', () => {
     httpTesting.expectOne('/api/v1/test').flush(null, { status: 400, statusText: 'Bad Request' });
 
     expect(status).toBe(400);
+  });
+
+  /** RM-LOAN-25, RM-LOAN-27 : le 503 LOAN_BUSY est notifié par l'écran, 500 et 502 restent toujours notifiés. */
+  describe('503 ignoré à la demande', () => {
+    function postWith(status: number, skipped: number[]): void {
+      http
+        .post('/api/v1/loans', {}, { context: skipErrorToast(...skipped) })
+        .subscribe({ error: () => undefined });
+      httpTesting
+        .expectOne('/api/v1/loans')
+        .flush({ title: 'Service momentanément occupé', code: 'LOAN_BUSY' }, { status, statusText: 'Error' });
+    }
+
+    it('ne notifie pas un 503 quand l’appelant le demande', () => {
+      postWith(503, [404, 409, 503]);
+
+      expect(messages.add).not.toHaveBeenCalled();
+    });
+
+    it('notifie un 503 quand l’appelant ne le demande pas', () => {
+      postWith(503, [404, 409]);
+
+      expect(messages.add).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([500, 502])('notifie toujours un %i, même demandé', (status) => {
+      postWith(status, [404, 409, 503, status]);
+
+      expect(messages.add).toHaveBeenCalledWith({
+        severity: 'error',
+        summary: 'Erreur',
+        detail: 'Une erreur technique est survenue. Réessayez plus tard.',
+      });
+    });
   });
 });

@@ -29,6 +29,8 @@ import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Page } from '../../../../core/http/page';
 import { isProblemDetail, ProblemDetail } from '../../../../core/http/problem-detail';
+import { formatIsoDate } from '../../../../shared/format/iso-date';
+import { borrowFailure } from '../../data/borrow-errors';
 import { Book, RegisterBookRequest } from '../../data/catalogue.model';
 import { CatalogueService } from '../../data/catalogue.service';
 import { BookFormDialog } from '../../ui/book-form-dialog/book-form-dialog';
@@ -73,6 +75,9 @@ export class Catalogue {
   private readonly reload$ = new Subject<void>();
   private readonly search = viewChild(BookSearch);
   private readonly addButton = viewChild('addButton', { read: ElementRef });
+  private readonly table = viewChild(BookTable);
+  /** Action à jouer une fois la liste rechargée (focus après un emprunt). */
+  private afterReload: (() => void) | null = null;
   private lastLoaded: Page<Book> | null = null;
   private lastFailure: Failure | null = null;
 
@@ -86,6 +91,10 @@ export class Catalogue {
   protected readonly view = toSignal(this.load(), { initialValue: INITIAL_VIEW });
 
   protected readonly canRegister = computed(() => this.auth.hasRole('LIBRARIAN'));
+  /** Le bouton « Emprunter » est réservé au rôle `MEMBER` (aussi en cumul avec `LIBRARIAN`). */
+  protected readonly canBorrow = computed(() => this.auth.hasRole('MEMBER'));
+  /** Livre en cours d'emprunt : un seul envoi à la fois (double clic = une requête). */
+  protected readonly borrowingId = signal<string | null>(null);
   protected readonly registerOpen = signal(false);
   protected readonly submitting = signal(false);
   protected readonly serverError = signal<ProblemDetail | null>(null);
@@ -158,6 +167,43 @@ export class Catalogue {
     this.search()?.clear();
   }
 
+  protected borrow(book: Book): void {
+    if (this.borrowingId() !== null) {
+      return;
+    }
+    this.borrowingId.set(book.id);
+    this.service
+      .borrow(book.id)
+      .pipe(
+        finalize(() => this.borrowingId.set(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (loan) => {
+          this.messages.add({
+            severity: 'success',
+            summary: 'Livre emprunté',
+            detail: `À rendre au plus tard le ${formatIsoDate(loan.dueOn)}.`,
+            life: 3000,
+          });
+          this.focusAfterBorrow(book.id);
+          this.reload$.next();
+        },
+        error: (error: unknown) => {
+          const failure = borrowFailure(error);
+          if (failure === null) {
+            // 403, 5xx, réseau : notification de l'intercepteur.
+            return;
+          }
+          this.messages.add({ severity: 'warn', summary: failure.message, life: 5000 });
+          if (failure.reload) {
+            this.focusAfterBorrow(book.id);
+            this.reload$.next();
+          }
+        },
+      });
+  }
+
   protected openRegister(): void {
     this.serverError.set(null);
     this.registerOpen.set(true);
@@ -216,6 +262,7 @@ export class Catalogue {
         this.service.search(toApiParams(state)).pipe(
           map((data): View => this.onLoaded(state, data)),
           catchError((error: unknown) => {
+            this.afterReload = null;
             this.lastLoaded = null;
             this.lastFailure =
               error instanceof HttpErrorResponse && error.status === 403 ? 'forbidden' : 'error';
@@ -239,6 +286,11 @@ export class Catalogue {
     }
     this.lastLoaded = data;
     this.lastFailure = null;
+    const after = this.afterReload;
+    this.afterReload = null;
+    if (after !== null) {
+      setTimeout(after);
+    }
     return { kind: 'loaded', data };
   }
 
@@ -248,6 +300,15 @@ export class Catalogue {
       queryParams: toQueryParams(state),
       replaceUrl,
     });
+  }
+
+  /** Focus sur le bouton de la même ligne s'il existe encore après le rechargement, sinon sur la recherche. */
+  private focusAfterBorrow(bookId: string): void {
+    this.afterReload = () => {
+      if (!this.table()?.focusBorrow(bookId)) {
+        this.search()?.focus();
+      }
+    };
   }
 
   private focusAddButton(): void {

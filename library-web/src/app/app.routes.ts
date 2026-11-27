@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { roleGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
   {
@@ -18,6 +19,12 @@ export const routes: Routes = [
         title: 'Catalogue',
         loadChildren: () =>
           import('./features/catalogue/catalogue.routes').then((m) => m.CATALOGUE_ROUTES),
+      },
+      {
+        path: 'emprunts',
+        title: 'Mes emprunts',
+        canActivate: [roleGuard('MEMBER')],
+        loadChildren: () => import('./features/loans/loans.routes').then((m) => m.LOANS_ROUTES),
       },
     ],
   },

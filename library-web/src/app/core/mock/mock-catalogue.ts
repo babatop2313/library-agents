@@ -18,6 +18,14 @@ interface MockBook {
   availableCopies: number;
 }
 
+/** Champs d'un livre repris par les emprunts (`title`, `author`, `isbn` du DTO `CurrentLoan`). */
+export interface MockBookSummary {
+  id: string;
+  isbn: string;
+  title: string;
+  author: string;
+}
+
 type MockResult = HttpResponse<unknown> | HttpErrorResponse;
 
 const BOOKS_URL = '/api/v1/books';
@@ -123,6 +131,30 @@ export class MockCatalogue {
       body: { ...book },
       headers: new HttpHeaders({ Location: `${BOOKS_URL}/${book.id}` }),
     });
+  }
+
+  /** Résumé d'un livre (état partagé avec les emprunts simulés) ; `null` s'il n'existe pas. */
+  findById(id: string): MockBookSummary | null {
+    const book = this.books.find((candidate) => candidate.id === id);
+    return book ? { id: book.id, isbn: book.isbn, title: book.title, author: book.author } : null;
+  }
+
+  /** Prend un exemplaire (emprunt) : faux s'il n'en reste aucun ou si le livre n'existe pas. */
+  takeCopy(id: string): boolean {
+    const book = this.books.find((candidate) => candidate.id === id);
+    if (!book || book.availableCopies < 1) {
+      return false;
+    }
+    book.availableCopies -= 1;
+    return true;
+  }
+
+  /** Rend un exemplaire (retour), sans dépasser le total ; sans effet si le livre n'existe plus. */
+  returnCopy(id: string): void {
+    const book = this.books.find((candidate) => candidate.id === id);
+    if (book && book.availableCopies < book.totalCopies) {
+      book.availableCopies += 1;
+    }
   }
 
   private readInt(

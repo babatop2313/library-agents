@@ -1,5 +1,13 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
@@ -43,10 +51,15 @@ export class BookTable {
   readonly query = input('');
   /** Vrai pour un bibliothécaire : adapte le texte du catalogue vide. */
   readonly canRegister = input(false);
+  /** Vrai pour un membre : ajoute la colonne d'action « Emprunter ». */
+  readonly canBorrow = input(false);
+  /** Livre en cours d'emprunt : désactive les autres boutons. */
+  readonly borrowingId = input<string | null>(null);
 
   readonly pageChange = output<BookPageChange>();
   readonly retry = output<void>();
   readonly clearSearch = output<void>();
+  readonly borrow = output<Book>();
 
   protected readonly pageSizes = [...PAGE_SIZES];
   protected readonly mobile = toSignal(
@@ -55,6 +68,22 @@ export class BookTable {
       .pipe(map((state) => state.matches)),
     { initialValue: false },
   );
+
+  private readonly isMedium = toSignal(
+    inject(BreakpointObserver)
+      .observe('(min-width: 768px)')
+      .pipe(map((state) => state.matches)),
+    { initialValue: true },
+  );
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** Nombre de colonnes visibles, pour que les états vide et erreur occupent toute la largeur. */
+  protected readonly colspan = computed(() => {
+    if (!this.canBorrow()) {
+      return 4;
+    }
+    return this.isMedium() ? 5 : 2;
+  });
 
   protected readonly rows = computed<(Book | null)[]>(() =>
     this.status() === 'skeleton'
@@ -69,6 +98,20 @@ export class BookTable {
   protected availability(book: Book): string {
     const label = book.availableCopies === 1 ? 'disponible' : 'disponibles';
     return `${book.availableCopies} ${label} sur ${book.totalCopies}`;
+  }
+
+  protected borrowLabel(book: Book): string {
+    return `Emprunter ${book.title}`;
+  }
+
+  /** Redonne le focus au bouton « Emprunter » d'un livre ; faux si la ligne n'existe plus. */
+  focusBorrow(bookId: string): boolean {
+    const host = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>('p-button[data-book-id]'),
+    ).find((element) => element.dataset['bookId'] === bookId);
+    const button = host?.querySelector('button');
+    button?.focus();
+    return button != null;
   }
 
   protected onPage(event: PaginatorState): void {

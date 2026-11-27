@@ -51,6 +51,24 @@ const LibraryPreset = definePreset(Aura, {
       },
     },
   },
+  // Contraste AA (design system, 2026-11-26) : le texte `warn` / `success` d'Aura est sous 4,5:1. Fonds et bordures inchangés.
+  // Jetons de la version installée de @primeuix/themes : `message.<sévérité>.color`, `toast.<sévérité>.color` / `detailColor`.
+  components: {
+    message: {
+      warn: { color: 'light-dark({yellow.800}, {yellow.500})' },
+      success: { color: 'light-dark({green.800}, {green.500})' },
+    },
+    toast: {
+      warn: {
+        color: 'light-dark({yellow.800}, {yellow.500})',
+        detailColor: 'light-dark({yellow.800}, {yellow.500})',
+      },
+      success: {
+        color: 'light-dark({green.800}, {green.500})',
+        detailColor: 'light-dark({green.800}, {green.500})',
+      },
+    },
+  },
 });
 
 /** Libellés d'accessibilité en français (paginateur, boutons des champs numériques). */

@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Emprunt déjà rendu",
+  "status": 409,
+  "detail": "Cet emprunt a déjà été rendu",
+  "instance": "/api/v1/loans",
+  "code": "LOAN_ALREADY_RETURNED"
+}

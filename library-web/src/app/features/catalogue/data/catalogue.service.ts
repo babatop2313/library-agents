@@ -4,13 +4,20 @@ import { Observable } from 'rxjs';
 
 import { skipErrorToast } from '../../../core/http/error-toast.context';
 import { Page } from '../../../core/http/page';
-import { Book, BookSearchParams, RegisterBookRequest } from './catalogue.model';
+import {
+  Book,
+  BookSearchParams,
+  BorrowBookRequest,
+  LoanCreated,
+  RegisterBookRequest,
+} from './catalogue.model';
 
 /** Seul accès HTTP de la feature (contrat : `docs/api/catalogue.md`). */
 @Injectable({ providedIn: 'root' })
 export class CatalogueService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/v1/books';
+  private readonly loansUrl = '/api/v1/loans';
 
   /** Livres disponibles, paginés ; `q` est omis s'il est vide. */
   search(params: BookSearchParams): Observable<Page<Book>> {
@@ -24,5 +31,16 @@ export class CatalogueService {
   /** Enregistre un livre ; les erreurs 400 et 409 sont reportées sur le formulaire, sans notification. */
   register(body: RegisterBookRequest): Observable<Book> {
     return this.http.post<Book>(this.baseUrl, body, { context: skipErrorToast(400, 409) });
+  }
+
+  /**
+   * Emprunte un livre pour le membre connecté (`POST /api/v1/loans`, contrat `docs/api/loan.md`).
+   * Appel dans cette feature : une feature n'importe pas une autre. 404, 409 et 503 sont notifiés par l'écran.
+   */
+  borrow(bookId: string): Observable<LoanCreated> {
+    const body: BorrowBookRequest = { bookId };
+    return this.http.post<LoanCreated>(this.loansUrl, body, {
+      context: skipErrorToast(404, 409, 503),
+    });
   }
 }

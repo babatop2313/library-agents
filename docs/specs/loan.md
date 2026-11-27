@@ -88,15 +88,15 @@ Les RM-01 à RM-05 du CLAUDE.md sont les règles de référence ; elles sont dé
 
 **Interface**
 - **RM-LOAN-21** : sur l'écran Catalogue, chaque ligne affiche un bouton « Emprunter » pour un utilisateur ayant le rôle `MEMBER` (masqué pour un `LIBRARIAN` seul). Pendant l'appel, le bouton de la ligne est désactivé avec indicateur (une seule requête par clic, double clic = une requête).
-- **RM-LOAN-22** : succès (201) : toast « Livre emprunté, à rendre avant le <date d'échéance> » ; la liste du catalogue est rechargée en conservant page et recherche (le livre peut disparaître s'il n'y a plus d'exemplaire). Erreurs 409 : message métier en français affiché par toast (un seul toast, pas de doublon avec l'`errorInterceptor` : option `SKIP_ERROR_TOAST` sur cet appel, toast émis par l'écran) :
+- **RM-LOAN-22** : succès (201) : toast « Livre emprunté, à rendre au plus tard le <date d'échéance> » ; la liste du catalogue est rechargée en conservant page et recherche (le livre peut disparaître s'il n'y a plus d'exemplaire). Erreurs 409 : message métier en français affiché par toast (un seul toast, pas de doublon avec l'`errorInterceptor` : option `SKIP_ERROR_TOAST` sur cet appel, toast émis par l'écran) :
   - `BOOK_NOT_AVAILABLE` : « Ce livre n'est plus disponible » ;
   - `LOAN_LIMIT_REACHED` : « Vous avez atteint la limite de 3 emprunts en cours » ;
   - `MEMBER_HAS_OVERDUE_LOAN` : « Rendez d'abord vos livres en retard » ;
   - `BOOK_ALREADY_BORROWED` : « Vous avez déjà emprunté ce livre ».
   404 `BOOK_NOT_FOUND` : « Ce livre n'existe plus » et rechargement. 403, 5xx, réseau : toast générique de l'`errorInterceptor`. 401 : comportement existant de l'`authInterceptor`.
 - **RM-LOAN-23** : route `/emprunts` (chargement paresseux, `authGuard`), lien « Mes emprunts » dans l'en-tête pour un utilisateur connecté ayant le rôle `MEMBER`. Un `LIBRARIAN` seul qui ouvre `/emprunts` est redirigé vers `/catalogue`.
-- **RM-LOAN-24** : l'écran « Mes emprunts » affiche un tableau (`p-table`) : Titre, Auteur, ISBN, Emprunté le, À rendre avant, Statut (`p-tag` « En cours » / « En retard » en danger) et un bouton « Rendre ». Un compteur « n / 3 emprunts en cours » est visible. Un bandeau d'avertissement s'affiche si au moins un emprunt est en retard (« Vous ne pouvez plus emprunter tant que vous avez un livre en retard »). États : chargement, vide (« Vous n'avez aucun emprunt en cours », avec lien vers le catalogue), erreur (toast + « Réessayer »). Dates au format français. Si `title` est nul (livre introuvable, RM-LOAN-32), la cellule affiche « Livre indisponible ».
-- **RM-LOAN-25** : « Rendre » demande une confirmation (`p-confirmdialog`), puis envoie `POST /api/v1/loans/{id}/return`, un seul envoi à la fois. Succès (204) : toast « Livre rendu », la ligne disparaît, le tableau est rechargé. 409 `LOAN_ALREADY_RETURNED` : toast « Cet emprunt est déjà rendu » et rechargement. 404 `LOAN_NOT_FOUND` : toast « Emprunt introuvable » et rechargement.
+- **RM-LOAN-24** : l'écran « Mes emprunts » affiche un tableau (`p-table`) : Titre, Auteur, ISBN, Emprunté le, À rendre au plus tard le, Statut (`p-tag` « En cours » / « En retard » en danger) et un bouton « Rendre ». Un compteur « n / 3 emprunts en cours » est visible ; à 3 / 3, l'aide « Limite atteinte : rendez un livre pour en emprunter un autre. » s'affiche dessous. Un bandeau d'avertissement s'affiche si au moins un emprunt est en retard (« Vous ne pouvez plus emprunter tant que vous avez un livre en retard »). États : chargement, vide (« Vous n'avez aucun emprunt en cours », avec lien vers le catalogue), erreur (toast + « Réessayer »). Dates au format français. Si `title` est nul (livre introuvable, RM-LOAN-32), la cellule affiche « Livre indisponible ».
+- **RM-LOAN-25** : « Rendre » demande une confirmation (`p-confirmdialog`), puis envoie `POST /api/v1/loans/{id}/return`, un seul envoi à la fois. Succès (204) : toast « Livre rendu », la ligne disparaît, le tableau est rechargé. 409 `LOAN_ALREADY_RETURNED` : toast « Cet emprunt est déjà rendu » et rechargement. 404 `LOAN_NOT_FOUND` : toast « Emprunt introuvable » et rechargement. 503 `LOAN_BUSY` : toast `warn` avec le message du contrat, sans rechargement.
 - **RM-LOAN-26** : accessibilité : libellés de boutons explicites (« Emprunter <titre> », « Rendre <titre> »), statut non porté par la seule couleur, focus géré à la fermeture de la confirmation, navigation clavier.
 - **RM-LOAN-27** : le mode `ng serve --configuration mock` simule les emprunts (création, limite à 3, retard, déjà emprunté, rendu, erreurs 409) et la décrémentation du catalogue simulé. Aucun code simulé dans le build normal.
 
@@ -519,6 +519,13 @@ Modèles `Loan { id, bookId, isbn, title, author, borrowedOn, dueOn, overdue }` 
 10. **Q10 : navigation.** Lien « Mes emprunts » dans l'en-tête, route `/emprunts`.
 11. **Q11 : confirmation.** `p-confirmdialog` avant le retour.
 12. **Documentation.** `APP_TIMEZONE`, `DEV_MEMBER_EMAIL` et `DEV_MEMBER_PASSWORD` sont documentées dans CLAUDE.md et `.env.example`, jamais dans `.env` (voir « À prévoir »).
+
+### Décisions de design (validées le 2026-11-26, écran `loan-my-loans`)
+13. **Libellé de l'échéance** : « À rendre au plus tard le » (colonne et toast d'emprunt), car le jour de l'échéance n'est pas un retard (RM-LOAN-05).
+14. **503 `LOAN_BUSY` au retour** : toast `warn` avec le message du contrat, sans rechargement (au lieu du toast générique).
+15. **Limite atteinte** : à 3 / 3, aide sous le compteur (RM-LOAN-24).
+16. **Pas de lien** vers « Mes emprunts » dans le toast de succès d'un emprunt.
+17. **Accessibilité et mise en page** : contraste AA des toasts et bandeaux `warn` / `success` (preset Aura surchargé), focus initial de la confirmation sur « Annuler », valeur absente = tiret masqué aux lecteurs d'écran + « Non renseigné », rupture intermédiaire 768–991 px, en-tête mobile réduit à l'icône sous 576 px, colonne « Disponibles » du catalogue en sous-ligne sous 768 px. Détails : `docs/design/screens/loan-my-loans.md` et `catalogue-list.md`.
 
 ## Questions ouvertes
 Aucune.

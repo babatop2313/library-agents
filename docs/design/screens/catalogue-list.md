@@ -151,6 +151,43 @@ Appel : `GET /api/v1/books?page=<page URL − 1>&size=<size>&q=<q>` (`q` omis si
   déconnecter » réduit à l'icône `pi pi-sign-out` (`aria-label="Se déconnecter"`), marges `px-3 px-md-4` alignées sur la page.
 - **En-tête** : fond en dégradé violet → fuchsia (`var(--app-header-bg)`), texte blanc ; lien actif souligné de 3 px blanc.
 
+## Évolution loan (validée le 2026-11-26 avec `loan-my-loans`, décisions A à K de sa fiche)
+> Ajout décrit sans nouvelle maquette ; le statut de cet écran dans `design.json` est inchangé. Sources :
+> `docs/specs/loan.md` (RM-LOAN-21, RM-LOAN-22), `docs/specs/loan-plan.md` (§6.3), `docs/api/loan.md` (POST `/api/v1/loans`).
+- **En-tête** : lien « Mes emprunts » (`/emprunts`) à droite de « Catalogue », seulement si `user().roles` contient
+  `MEMBER` ; même style et même état actif. Sous 576 px, libellé « Bibliothèque » masqué (icône seule) pour que les deux
+  liens tiennent (détail dans `loan-my-loans.md`, §2).
+- **Colonne d'action** : seulement si l'utilisateur a le rôle `MEMBER` (aussi en cumul avec `LIBRARIAN` ; absente pour
+  un `LIBRARIAN` seul, sans espace réservé). Dernière colonne, en-tête visuellement masqué « Action », largeur 8rem,
+  bouton aligné à droite. `colspan` des états vides : 5 au lieu de 4.
+- **Bouton par ligne** : `p-button label="Emprunter" severity="secondary" [outlined]="true" size="small"` (même style
+  que « Rendre »), `ariaLabel` « Emprunter {titre} ». L'action principale de l'écran reste « Ajouter un livre ».
+- **Pendant l'appel** : bouton de la ligne en `[loading]` (spinner, libellé conservé), **tous** les autres « Emprunter »
+  `[disabled]` ; un clic pendant un emprunt est ignoré (double clic = une requête).
+- **Succès (201)** : toast `success` « Livre emprunté », détail « À rendre au plus tard le {jj/mm/aaaa}. » (`dueOn`,
+  via `formatIsoDate` ; libellé validé à la place de « à rendre avant » de la spec, le jour de l'échéance n'étant pas un
+  retard) ; aucun lien vers « Mes emprunts » dans le toast ; liste rechargée (voile `[loading]`) sur la même page et la même recherche ; le livre peut
+  disparaître s'il n'a plus d'exemplaire. Focus : sur le bouton de la même ligne s'il existe encore, sinon sur le
+  champ de recherche.
+- **Refus** (toast `warn` émis par l'écran, un seul, `skipErrorToast(404, 409, 503)`) :
+  | Réponse | Toast | Suite |
+  |---|---|---|
+  | 409 `BOOK_NOT_AVAILABLE` | Ce livre n'est plus disponible | rechargement |
+  | 409 `LOAN_LIMIT_REACHED` | Vous avez atteint la limite de 3 emprunts en cours | aucune |
+  | 409 `MEMBER_HAS_OVERDUE_LOAN` | Rendez d'abord vos livres en retard | aucune |
+  | 409 `BOOK_ALREADY_BORROWED` | Vous avez déjà emprunté ce livre | aucune |
+  | 404 `BOOK_NOT_FOUND` | Ce livre n'existe plus | rechargement |
+  | 503 `LOAN_BUSY` | Le service est momentanément occupé, réessayez (toast `warn` émis par l'écran, sans doublon de l'intercepteur) | aucune (pas de rechargement) |
+  | 403, 5xx, réseau | toast générique de l'`errorInterceptor` | aucune |
+  | 401 | `authInterceptor` existant | connexion |
+- **Mobile (< 768 px)** : avec la colonne « Disponibles » (7,5rem) et le bouton, le titre n'aurait plus que ≈ 70 px à
+  390 px. Quand la colonne d'action est présente, sous `md`, la colonne « Disponibles » est masquée
+  (`d-none d-md-table-cell`) et sa valeur passe en sous-ligne du titre, après l'auteur et l'ISBN : « 2 disponibles sur
+  3 » (singulier « 1 disponible sur 1 »), petit texte secondaire, lu tel quel par les lecteurs d'écran. Sans colonne
+  d'action (`LIBRARIAN` seul), l'affichage mobile validé est inchangé. `colspan` des états vides sous `md` : 2.
+- **Toasts** : couleurs `success` / `warn` surchargées dans le preset (`../design-system.md`, §1), y compris le toast
+  existant « Livre enregistré ».
+
 ## Décisions de validation (2026-11-23)
 Design validé par l'humain avec deux remarques, reportées ici avant l'implémentation :
 1. **Icônes** : aucun emoji ni caractère typographique en guise d'icône ; uniquement des icônes vectorielles modernes,

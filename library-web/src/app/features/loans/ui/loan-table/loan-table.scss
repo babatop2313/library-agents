@@ -1,0 +1,96 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .p-datatable {
+  border: 1px solid var(--p-surface-200);
+  border-radius: var(--p-border-radius-md);
+  overflow: hidden;
+}
+
+.col-date {
+  width: 8rem;
+}
+
+.col-due {
+  width: 9rem;
+}
+
+.col-status {
+  width: 8rem;
+}
+
+.col-action {
+  width: 7rem;
+}
+
+.cell-title {
+  overflow-wrap: anywhere;
+}
+
+.cell-sub {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.cell-tag {
+  display: block;
+  margin: 0.25rem 0;
+}
+
+.cell-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.unavailable {
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}
+
+.overdue {
+  color: var(--p-red-700);
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--p-surface-50);
+}
+
+.state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 0.75rem;
+  border-radius: 50%;
+  font-size: 1.75rem;
+  background: var(--p-primary-100);
+  color: var(--p-primary-700);
+}
+
+.state-icon-error {
+  background: var(--p-red-50);
+  color: var(--p-red-600);
+}
+
+.state-title {
+  margin: 0 0 0.375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--p-surface-900);
+  overflow-wrap: anywhere;
+}
+
+.state-text {
+  max-width: 32rem;
+  margin: 0 auto 1rem;
+  color: var(--p-text-muted-color);
+}

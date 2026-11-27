@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Livre introuvable",
+  "status": 404,
+  "detail": "Aucun livre du catalogue ne correspond à cet identifiant",
+  "instance": "/api/v1/loans",
+  "code": "BOOK_NOT_FOUND"
+}

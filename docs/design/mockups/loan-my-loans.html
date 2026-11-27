@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — loan-my-loans (validé)</title>
+<style>
+  /* Jetons : thème Aura (PrimeNG 21), palette primaire violette (design system validé). */
+  :root {
+    --p-primary-50: #f5f3ff; --p-primary-100: #ede9fe; --p-primary-600: #7c3aed; --p-primary-700: #6d28d9; --p-primary-800: #5b21b6;
+    --p-primary-color: #7c3aed; --p-primary-contrast-color: #ffffff;
+    --p-fuchsia-600: #c026d3;
+    --app-header-bg: linear-gradient(90deg, var(--p-primary-600) 0%, var(--p-fuchsia-600) 100%);
+    --p-surface-0: #ffffff; --p-surface-50: #f8fafc; --p-surface-100: #f1f5f9; --p-surface-200: #e2e8f0;
+    --p-surface-300: #cbd5e1; --p-surface-400: #94a3b8; --p-surface-500: #64748b; --p-surface-700: #334155;
+    --p-surface-900: #0f172a;
+    --p-text-color: #334155; --p-text-muted-color: #64748b;
+    --p-red-50: #fef2f2; --p-red-100: #fee2e2; --p-red-200: #fecaca; --p-red-600: #dc2626; --p-red-700: #b91c1c;
+    --p-sky-100: #e0f2fe; --p-sky-700: #0369a1;
+    --p-orange-100: #ffedd5; --p-orange-700: #c2410c;
+    --p-yellow-50: #fefce8; --p-yellow-200: #fef08a; --p-yellow-800: #854d0e;
+    --p-green-50: #f0fdf4; --p-green-200: #bbf7d0; --p-green-800: #166534;
+    --radius-md: 6px; --radius-xl: 12px;
+    --app-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--app-font); color: var(--p-text-color); background: #e9edf2; font-size: 16px; line-height: 1.5; }
+  .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  /* Cadre de la planche */
+  .board { max-width: 1240px; margin: 0 auto; padding: 32px 24px 64px; }
+  .board > h1 { font-size: 22px; margin: 0 0 4px; color: var(--p-surface-900); }
+  .board > p.lead { margin: 0 0 32px; color: var(--p-text-muted-color); font-size: 14px; }
+  .state-title { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--p-surface-500); margin: 40px 0 8px; }
+  .state-note { font-size: 14px; color: var(--p-text-muted-color); margin: 0 0 12px; max-width: 900px; }
+  .frame { background: var(--p-surface-0); border-radius: 8px; box-shadow: 0 1px 3px rgba(15,23,42,.12); overflow: hidden; position: relative; }
+  .frame.mobile { width: 390px; }
+  .row-mobile { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+  .caption { font-size: 13px; color: var(--p-surface-500); margin-top: 8px; }
+
+  /* Icônes : traits fins façon PrimeIcons (implémentation : classes pi pi-*). */
+  .ico { display: inline-flex; align-items: center; justify-content: center; width: 1em; line-height: 1; }
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; vertical-align: -0.125em; }
+
+  /* En-tête (existant + liens Catalogue et Mes emprunts) */
+  .app-header { display: flex; align-items: center; gap: 24px; padding: 12px 24px; background: var(--app-header-bg); color: var(--p-primary-contrast-color); }
+  .app-title { display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-size: 1.25rem; font-weight: 600; }
+  .nav { display: flex; gap: 24px; }
+  .nav a { color: inherit; text-decoration: none; font-weight: 500; padding: 6px 2px; border-bottom: 3px solid transparent; white-space: nowrap; }
+  .nav a.active { border-bottom-color: #ffffff; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-md); white-space: nowrap; line-height: 1.5; }
+  .tag.mem { background: var(--p-orange-100); color: var(--p-orange-700); }
+  .tag.info { background: var(--p-sky-100); color: var(--p-sky-700); }
+  .tag.danger { background: var(--p-red-100); color: var(--p-red-700); }
+  .btn-header { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--p-surface-100); background: var(--p-surface-100); color: var(--p-surface-700); }
+
+  /* Page */
+  .page { padding: 24px 24px 32px; }
+  .title-block { margin-bottom: 24px; }
+  .title-block.with-banner { margin-bottom: 16px; }
+  .title-block h2 { margin: 0; font-size: 1.75rem; font-weight: 600; color: var(--p-surface-900); line-height: 1.2; }
+  .counter { margin: 6px 0 0; font-size: 14px; color: var(--p-text-muted-color); font-variant-numeric: tabular-nums; }
+
+  /* Boutons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-weight: 500; padding: 8px 14px; border-radius: var(--radius-md); border: 1px solid transparent; white-space: nowrap; cursor: pointer; text-decoration: none; }
+  .btn-sm { font-size: 14px; padding: 5px 10px; gap: 6px; }
+  .btn-primary { background: var(--p-primary-color); border-color: var(--p-primary-color); color: var(--p-primary-contrast-color); }
+  .btn-outlined { background: transparent; border-color: var(--p-surface-300); color: var(--p-surface-700); }
+  .btn-text { background: transparent; color: var(--p-surface-700); }
+  .btn[disabled], .btn.is-disabled { opacity: .6; cursor: default; }
+  .focus { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+
+  /* p-message warn (couleur de texte surchargée à yellow.800 pour le contraste AA) */
+  .message { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border: 1px solid var(--p-yellow-200); background: var(--p-yellow-50); color: var(--p-yellow-800); border-radius: var(--radius-md); font-weight: 500; margin-bottom: 16px; }
+  .message .ico { font-size: 18px; margin-top: 3px; }
+
+  /* p-table */
+  .table-wrap { border: 1px solid var(--p-surface-200); border-radius: var(--radius-md); overflow: hidden; position: relative; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 600; background: var(--p-surface-50); color: var(--p-surface-700); padding: 12px 16px; border-bottom: 1px solid var(--p-surface-200); white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--p-surface-200); vertical-align: top; overflow-wrap: anywhere; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .date, .isbn { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .late { color: var(--p-red-700); font-weight: 600; }
+  .c-title { font-weight: 500; color: var(--p-surface-900); }
+  .c-missing { font-style: italic; color: var(--p-text-muted-color); font-weight: 500; }
+  .muted { color: var(--p-text-muted-color); }
+  .col-date { width: 8rem; } .col-due { width: 9rem; } th.col-due { white-space: normal; line-height: 1.3; }
+  .counter + .counter { margin-top: 2px; } .col-status { width: 8rem; } .col-action { width: 7rem; text-align: right; }
+  .sub { display: block; font-size: 14px; color: var(--p-text-muted-color); font-weight: 400; }
+  .sub.tagline { margin: 4px 0 2px; }
+  .skel { display: block; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--p-surface-200), var(--p-surface-100), var(--p-surface-200)); }
+  .overlay { position: absolute; inset: 49px 0 0 0; background: rgba(255,255,255,.6); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--p-primary-color); }
+
+  /* États dans le tableau */
+  .state { text-align: center; padding: 48px 24px; background: var(--p-surface-50); }
+  .state .big { font-size: 28px; width: 64px; height: 64px; border-radius: 50%; background: var(--p-primary-100); color: var(--p-primary-700); display: inline-flex; margin-bottom: 12px; }
+  .state .big.err { background: var(--p-red-50); color: var(--p-red-600); }
+  .state h3 { margin: 0 0 6px; font-size: 1.125rem; font-weight: 600; color: var(--p-surface-900); }
+  .state p { margin: 0 auto 16px; max-width: 32rem; color: var(--p-text-muted-color); }
+
+  /* p-confirmdialog */
+  .mask { position: absolute; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .dialog { width: 28rem; max-width: 100%; background: var(--p-surface-0); border-radius: var(--radius-xl); box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); }
+  .dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px; }
+  .dialog-header h3 { margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--p-surface-900); }
+  .dialog-close { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--p-surface-500); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+  .dialog-content { padding: 0 20px 20px; }
+  .dialog-content p { margin: 0; }
+  .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
+
+  /* p-toast */
+  .toasts { display: flex; flex-direction: column; gap: 12px; padding: 24px; background: var(--p-surface-50); }
+  .toast-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .toast { width: 25rem; max-width: 100%; display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid; box-shadow: 0 4px 8px rgba(0,0,0,.04); }
+  .toast .ico { font-size: 18px; margin-top: 3px; }
+  .toast strong { display: block; font-weight: 600; }
+  .toast span.detail { display: block; font-size: 14px; }
+  .toast .close { margin-left: auto; font-size: 14px; opacity: .8; margin-top: 4px; }
+  .toast.success { background: var(--p-green-50); border-color: var(--p-green-200); color: var(--p-green-800); }
+  .toast.warn { background: var(--p-yellow-50); border-color: var(--p-yellow-200); color: var(--p-yellow-800); }
+  .toast.error { background: var(--p-red-50); border-color: var(--p-red-200); color: var(--p-red-700); }
+  .toast-caption { font-size: 13px; color: var(--p-surface-500); margin: 4px 0 0; }
+
+  /* Mobile */
+  .mobile .app-header { padding: 12px 16px; gap: 16px; }
+  .mobile .nav { gap: 16px; }
+  .mobile .app-title { font-size: 1.125rem; }
+  .mobile .btn-header { padding: 0; width: 40px; height: 40px; justify-content: center; }
+  .mobile .page { padding: 16px; }
+  .mobile .title-block h2 { font-size: 1.5rem; }
+  .mobile td, .mobile th { padding: 10px 12px; }
+  .mobile .col-action { width: 6rem; }
+  .mobile .overlay { inset: 45px 0 0 0; }
+</style>
+</head>
+<body>
+<!-- Planche d'icônes interne (aucune ressource externe) : équivalents visuels des PrimeIcons. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M6.5 17A2.5 2.5 0 0 0 4 19.5 2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-sign-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-times" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-spinner" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-excl-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-times-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></symbol>
+  </defs>
+</svg>
+<div class="board">
+  <h1>loan-my-loans — Mes emprunts</h1>
+  <p class="lead">Statut : validé (2026-11-26, décisions A à K intégrées) · Maquette statique fidèle au thème Aura (PrimeNG 21) · Données fictives, date du jour supposée : 26/11/2026 · Icônes vectorielles au trait (équivalents PrimeIcons <code>pi pi-*</code>), aucun emoji.</p>
+
+  <!-- ===================================================== 1. Liste avec retard -->
+  <h2 class="state-title">1. État principal — 3 emprunts dont un en retard et un livre indisponible, desktop (1200 px)</h2>
+  <p class="state-note">Lien « Mes emprunts » actif (souligné 3 px blanc, <code>aria-current="page"</code>), visible pour <code>MEMBER</code>. Compteur « 3 / 3 » suivi de l'aide « Limite atteinte… » (même région <code>aria-live</code>). Colonne « À rendre au plus tard le » (en-tête sur deux lignes). Bandeau <code>p-message</code> <code>warn</code> car un emprunt est en retard. Ordre de l'API (échéance croissante), aucun tri client. Ligne en retard : tag « En retard » (danger + icône) et échéance en rouge. Ligne dont le livre n'existe plus (<code>title</code> nul) : « Livre indisponible ». Focus clavier figuré sur « Rendre » de la première ligne (<code>aria-label="Rendre La Peste"</code>).</p>
+  <div class="frame">
+    <header class="app-header">
+      <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a href="#">Catalogue</a><a class="active" href="#" aria-current="page">Mes emprunts</a></nav>
+      <div class="header-right">
+        <span>lucas.bernard@exemple.fr</span>
+        <span class="tag mem">Membre</span>
+        <span class="btn-header"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span>Se déconnecter</span>
+      </div>
+    </header>
+    <main class="page">
+      <div class="title-block with-banner">
+        <h2>Mes emprunts</h2>
+        <div aria-live="polite">
+          <p class="counter"><span aria-hidden="true">3 / 3 emprunts en cours</span><span class="visually-hidden">3 emprunts en cours sur 3 autorisés</span></p>
+          <p class="counter">Limite atteinte : rendez un livre pour en emprunter un autre.</p>
+        </div>
+      </div>
+      <div class="message">
+        <span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span>
+        <span>Vous ne pouvez plus emprunter tant que vous avez un livre en retard</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Mes emprunts en cours</caption>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="c-title">La Peste</td><td>Albert Camus</td><td class="isbn">9782070360420</td>
+              <td class="date">05/11/2026</td><td class="date late">19/11/2026</td>
+              <td><span class="tag danger"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-excl-circle"/></svg></span>En retard</span></td>
+              <td class="col-action"><button class="btn btn-sm btn-outlined focus" type="button" aria-label="Rendre La Peste">Rendre</button></td>
+            </tr>
+            <tr>
+              <td class="c-title">Bel-Ami</td><td>Guy de Maupassant</td><td class="isbn">9782253004226</td>
+              <td class="date">20/11/2026</td><td class="date">04/12/2026</td>
+              <td><span class="tag info">En cours</span></td>
+              <td class="col-action"><button class="btn btn-sm btn-outlined" type="button" aria-label="Rendre Bel-Ami">Rendre</button></td>
+            </tr>
+            <tr>
+              <td><span class="c-missing">Livre indisponible</span><span class="sub">Ce livre n'est plus au catalogue.</span></td>
+              <td class="muted"><span aria-hidden="true">—</span><span class="visually-hidden">Non renseigné</span></td>
+              <td class="muted"><span aria-hidden="true">—</span><span class="visually-hidden">Non renseigné</span></td>
+              <td class="date">24/11/2026</td><td class="date">08/12/2026</td>
+              <td><span class="tag info">En cours</span></td>
+              <td class="col-action"><button class="btn btn-sm btn-outlined" type="button" aria-label="Rendre le livre indisponible emprunté le 24/11/2026">Rendre</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 2. Confirmation -->
+  <h2 class="state-title">2. Confirmation du retour (p-confirmdialog ouvert)</h2>
+  <p class="state-note">Ouvert par « Rendre » de « La Peste ». Masque modal <code>rgba(0,0,0,.4)</code>, rayon 12 px. Focus initial sur « Annuler » (<code>defaultFocus="reject"</code>). Échap, la croix et « Annuler » ferment sans requête et rendent le focus au bouton « Rendre » de la ligne. Pour un livre indisponible : « Confirmez-vous le retour de ce livre, emprunté le 24/11/2026 ? ».</p>
+  <div class="frame">
+    <header class="app-header">
+      <a class="app-title" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span><span>Bibliothèque</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a href="#">Catalogue</a><a class="active" href="#" aria-current="page">Mes emprunts</a></nav>
+      <div class="header-right">
+        <span>lucas.bernard@exemple.fr</span>
+        <span class="tag mem">Membre</span>
+        <span class="btn-header"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span>Se déconnecter</span>
+      </div>
+    </header>
+    <main class="page">
+      <div class="title-block with-banner">
+        <h2>Mes emprunts</h2>
+        <p class="counter"><span aria-hidden="true">3 / 3 emprunts en cours</span></p>
+        <p class="counter">Limite atteinte : rendez un livre pour en emprunter un autre.</p>
+      </div>
+      <div class="message">
+        <span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span>
+        <span>Vous ne pouvez plus emprunter tant que vous avez un livre en retard</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="c-title">La Peste</td><td>Albert Camus</td><td class="isbn">9782070360420</td><td class="date">05/11/2026</td><td class="date late">19/11/2026</td><td><span class="tag danger"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-excl-circle"/></svg></span>En retard</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button">Rendre</button></td></tr>
+            <tr><td class="c-title">Bel-Ami</td><td>Guy de Maupassant</td><td class="isbn">9782253004226</td><td class="date">20/11/2026</td><td class="date">04/12/2026</td><td><span class="tag info">En cours</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button">Rendre</button></td></tr>
+            <tr><td><span class="c-missing">Livre indisponible</span><span class="sub">Ce livre n'est plus au catalogue.</span></td><td class="muted"><span aria-hidden="true">—</span></td><td class="muted"><span aria-hidden="true">—</span></td><td class="date">24/11/2026</td><td class="date">08/12/2026</td><td><span class="tag info">En cours</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button">Rendre</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+    <div class="mask">
+      <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg1-title" aria-describedby="dlg1-msg">
+        <div class="dialog-header">
+          <h3 id="dlg1-title">Rendre ce livre ?</h3>
+          <button class="dialog-close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button>
+        </div>
+        <div class="dialog-content"><p id="dlg1-msg">Confirmez-vous le retour de « La Peste » ?</p></div>
+        <div class="dialog-footer">
+          <button class="btn btn-text focus" type="button">Annuler</button>
+          <button class="btn btn-primary" type="button">Rendre</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 3. Retour en cours -->
+  <h2 class="state-title">3. Retour en cours (après confirmation), aucun retard</h2>
+  <p class="state-note">2 emprunts, aucun en retard : pas de bandeau. Retour de « Candide » envoyé : bouton de la ligne en <code>[loading]</code> (spinner, libellé conservé), l'autre « Rendre » désactivé (un seul envoi à la fois). En cas de succès : toast « Livre rendu », voile <code>[loading]</code> pendant le rechargement, ligne retirée, compteur « 1 / 3 » annoncé, focus sur le titre « Mes emprunts ».</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-block">
+        <h2>Mes emprunts</h2>
+        <p class="counter" aria-live="polite"><span aria-hidden="true">2 / 3 emprunts en cours</span><span class="visually-hidden">2 emprunts en cours sur 3 autorisés</span></p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <caption class="visually-hidden">Mes emprunts en cours</caption>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="c-title">L'Étranger</td><td>Albert Camus</td><td class="isbn">9782070360024</td><td class="date">24/11/2026</td><td class="date">08/12/2026</td><td><span class="tag info">En cours</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button" disabled aria-label="Rendre L'Étranger">Rendre</button></td></tr>
+            <tr><td class="c-title">Candide</td><td>Voltaire</td><td class="isbn">9782070408504</td><td class="date">25/11/2026</td><td class="date">09/12/2026</td><td><span class="tag info">En cours</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button" disabled aria-label="Rendre Candide"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-spinner"/></svg></span>Rendre</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 4. Chargement -->
+  <h2 class="state-title">4. Chargement initial</h2>
+  <p class="state-note">En-têtes visibles, 3 lignes <code>p-skeleton</code> (maximum d'emprunts), compteur « Chargement de vos emprunts… » (lu par <code>aria-live</code>), bandeau absent, <code>aria-busy="true"</code> sur le tableau.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-block">
+        <h2>Mes emprunts</h2>
+        <p class="counter" aria-live="polite">Chargement de vos emprunts…</p>
+      </div>
+      <div class="table-wrap" aria-busy="true">
+        <table>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="skel" style="width:70%"></span></td><td><span class="skel" style="width:60%"></span></td><td><span class="skel" style="width:85%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:70%"></span></td><td><span class="skel" style="width:70%;margin-left:auto"></span></td></tr>
+            <tr><td><span class="skel" style="width:55%"></span></td><td><span class="skel" style="width:45%"></span></td><td><span class="skel" style="width:85%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:70%"></span></td><td><span class="skel" style="width:70%;margin-left:auto"></span></td></tr>
+            <tr><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:65%"></span></td><td><span class="skel" style="width:85%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:80%"></span></td><td><span class="skel" style="width:70%"></span></td><td><span class="skel" style="width:70%;margin-left:auto"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 5. Vide -->
+  <h2 class="state-title">5. Aucun emprunt en cours</h2>
+  <p class="state-note">Modèle <code>emptymessage</code> du tableau, pastille <code>pi pi-book</code>. Compteur « 0 / 3 ». Le bouton principal « Parcourir le catalogue » est un lien (<code>routerLink="/catalogue"</code>) : seule action principale de l'écran dans cet état. Même état après le retour du dernier livre.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-block">
+        <h2>Mes emprunts</h2>
+        <p class="counter" aria-live="polite"><span aria-hidden="true">0 / 3 emprunts en cours</span><span class="visually-hidden">0 emprunt en cours sur 3 autorisés</span></p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody><tr><td colspan="7" class="state">
+            <span class="big ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span>
+            <h3>Vous n'avez aucun emprunt en cours</h3>
+            <p>Choisissez un livre dans le catalogue : vous pouvez en emprunter jusqu'à 3 à la fois, pour 14 jours.</p>
+            <a class="btn btn-primary" href="#"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span>Parcourir le catalogue</a>
+          </td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 6. Erreur -->
+  <h2 class="state-title">6. Erreur de chargement (réseau ou 5xx)</h2>
+  <p class="state-note">Toast de l'<code>errorInterceptor</code> en haut à droite (voir section 7) et, dans le tableau, message + « Réessayer » (<code>[loading]</code> pendant l'appel). Compteur et bandeau masqués. Variante 403 : titre « Vous n'avez pas les droits nécessaires pour consulter vos emprunts », sans bouton.</p>
+  <div class="frame">
+    <main class="page">
+      <div class="title-block"><h2>Mes emprunts</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">ISBN</th><th scope="col" class="col-date">Emprunté le</th><th scope="col" class="col-due">À rendre au plus tard le</th><th scope="col" class="col-status">Statut</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr>
+          </thead>
+          <tbody><tr><td colspan="7" class="state">
+            <span class="big err ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span>
+            <h3>Vos emprunts n'ont pas pu être chargés</h3>
+            <p>Vérifiez votre connexion, puis réessayez.</p>
+            <button class="btn btn-outlined" type="button"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-refresh"/></svg></span>Réessayer</button>
+          </td></tr></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================================================== 7. Toasts -->
+  <h2 class="state-title">7. Notifications (p-toast racine, en haut à droite)</h2>
+  <p class="state-note">Succès : 3 s. Avertissements métier émis par l'écran (pas de doublon avec l'intercepteur : <code>skipErrorToast(404, 409)</code>), suivis d'un rechargement. Couleurs de texte selon la surcharge validée du preset (<code>{green.800}</code>, <code>{yellow.800}</code>, contraste ≈ 7:1 ; design system §1). Le 503 <code>LOAN_BUSY</code> ne recharge pas le tableau. Pour mémoire, le toast d'emprunt du catalogue (sans lien vers « Mes emprunts »).</p>
+  <div class="frame">
+    <div class="toasts">
+      <div class="toast-row">
+        <div>
+          <div class="toast success" role="status"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check-circle"/></svg></span><div><strong>Livre rendu</strong></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">204 — retour réussi</p>
+        </div>
+        <div>
+          <div class="toast warn" role="alert"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span><div><strong>Cet emprunt est déjà rendu</strong></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">409 LOAN_ALREADY_RETURNED — puis rechargement</p>
+        </div>
+      </div>
+      <div class="toast-row">
+        <div>
+          <div class="toast warn" role="alert"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span><div><strong>Emprunt introuvable</strong></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">404 LOAN_NOT_FOUND — puis rechargement</p>
+        </div>
+        <div>
+          <div class="toast error" role="alert"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-times-circle"/></svg></span><div><strong>Erreur</strong><span class="detail">Une erreur technique est survenue. Réessayez plus tard.</span></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">Réseau ou 5xx — toast existant de l'errorInterceptor</p>
+        </div>
+      </div>
+      <div class="toast-row">
+        <div>
+          <div class="toast warn" role="alert"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span><div><strong>Le service est momentanément occupé, réessayez</strong></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">503 LOAN_BUSY — sans rechargement (aussi à l'emprunt depuis le catalogue)</p>
+        </div>
+        <div>
+          <div class="toast success" role="status"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-check-circle"/></svg></span><div><strong>Livre emprunté</strong><span class="detail">À rendre au plus tard le 10/12/2026.</span></div><span class="close" aria-hidden="true"><svg class="i"><use href="#i-times"/></svg></span></div>
+          <p class="toast-caption">Catalogue, 201 — emprunt réussi</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== 8. Mobile -->
+  <h2 class="state-title">8. Mobile (390 px)</h2>
+  <p class="state-note">Marges 16 px, aucun défilement horizontal. En-tête : libellé « Bibliothèque » masqué sous 576 px (icône seule, <code>aria-label="Bibliothèque, accueil"</code>) pour que les deux liens tiennent ; e-mail et rôle masqués, « Se déconnecter » en icône. Tableau à deux colonnes : le titre porte le tag de statut puis les sous-lignes (auteur, ISBN, dates) ; « Rendre » à droite. Entre 768 et 991 px (non figuré) : auteur, ISBN et date d'emprunt en sous-lignes du titre ; colonnes « À rendre au plus tard le », statut et action conservées. À gauche : liste ; à droite : confirmation.</p>
+  <div class="row-mobile">
+    <div>
+      <div class="frame mobile">
+        <header class="app-header">
+          <a class="app-title" href="#" aria-label="Bibliothèque, accueil"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span></a>
+          <nav class="nav" aria-label="Navigation principale"><a href="#">Catalogue</a><a class="active" href="#" aria-current="page">Mes emprunts</a></nav>
+          <div class="header-right"><span class="btn-header" aria-label="Se déconnecter"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span></span></div>
+        </header>
+        <main class="page">
+          <div class="title-block with-banner">
+            <h2>Mes emprunts</h2>
+            <div aria-live="polite">
+              <p class="counter"><span aria-hidden="true">3 / 3 emprunts en cours</span><span class="visually-hidden">3 emprunts en cours sur 3 autorisés</span></p>
+              <p class="counter">Limite atteinte : rendez un livre pour en emprunter un autre.</p>
+            </div>
+          </div>
+          <div class="message">
+            <span class="ico" aria-hidden="true"><svg class="i"><use href="#i-warning"/></svg></span>
+            <span>Vous ne pouvez plus emprunter tant que vous avez un livre en retard</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <caption class="visually-hidden">Mes emprunts en cours</caption>
+              <thead><tr><th scope="col">Titre</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="c-title">La Peste</span>
+                    <span class="sub tagline"><span class="tag danger"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-excl-circle"/></svg></span>En retard</span></span>
+                    <span class="sub">Albert Camus</span><span class="sub isbn">ISBN 9782070360420</span>
+                    <span class="sub date">Emprunté le 05/11/2026</span><span class="sub date late">À rendre au plus tard le19/11/2026</span></td>
+                  <td class="col-action"><button class="btn btn-sm btn-outlined" type="button" aria-label="Rendre La Peste">Rendre</button></td>
+                </tr>
+                <tr>
+                  <td><span class="c-title">Bel-Ami</span>
+                    <span class="sub tagline"><span class="tag info">En cours</span></span>
+                    <span class="sub">Guy de Maupassant</span><span class="sub isbn">ISBN 9782253004226</span>
+                    <span class="sub date">Emprunté le 20/11/2026</span><span class="sub date">À rendre au plus tard le04/12/2026</span></td>
+                  <td class="col-action"><button class="btn btn-sm btn-outlined" type="button" aria-label="Rendre Bel-Ami">Rendre</button></td>
+                </tr>
+                <tr>
+                  <td><span class="c-missing">Livre indisponible</span>
+                    <span class="sub tagline"><span class="tag info">En cours</span></span>
+                    <span class="sub">Ce livre n'est plus au catalogue.</span>
+                    <span class="sub date">Emprunté le 24/11/2026</span><span class="sub date">À rendre au plus tard le08/12/2026</span></td>
+                  <td class="col-action"><button class="btn btn-sm btn-outlined" type="button" aria-label="Rendre le livre indisponible emprunté le 24/11/2026">Rendre</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+      <p class="caption">Liste avec retard et livre indisponible.</p>
+    </div>
+    <div>
+      <div class="frame mobile" style="min-height: 560px;">
+        <header class="app-header">
+          <a class="app-title" href="#" aria-label="Bibliothèque, accueil"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-book"/></svg></span></a>
+          <nav class="nav" aria-label="Navigation principale"><a href="#">Catalogue</a><a class="active" href="#" aria-current="page">Mes emprunts</a></nav>
+          <div class="header-right"><span class="btn-header" aria-label="Se déconnecter"><span class="ico" aria-hidden="true"><svg class="i"><use href="#i-sign-out"/></svg></span></span></div>
+        </header>
+        <main class="page">
+          <div class="title-block">
+            <h2>Mes emprunts</h2>
+            <p class="counter"><span aria-hidden="true">2 / 3 emprunts en cours</span></p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Titre</th><th scope="col" class="col-action"><span class="visually-hidden">Action</span></th></tr></thead>
+              <tbody>
+                <tr><td><span class="c-title">L'Étranger</span><span class="sub tagline"><span class="tag info">En cours</span></span><span class="sub">Albert Camus</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button">Rendre</button></td></tr>
+                <tr><td><span class="c-title">Candide</span><span class="sub tagline"><span class="tag info">En cours</span></span><span class="sub">Voltaire</span></td><td class="col-action"><button class="btn btn-sm btn-outlined" type="button">Rendre</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+        <div class="mask">
+          <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg2-title" aria-describedby="dlg2-msg">
+            <div class="dialog-header">
+              <h3 id="dlg2-title">Rendre ce livre ?</h3>
+              <button class="dialog-close" type="button" aria-label="Fermer"><svg class="i"><use href="#i-times"/></svg></button>
+            </div>
+            <div class="dialog-content"><p id="dlg2-msg">Confirmez-vous le retour de « Candide » ?</p></div>
+            <div class="dialog-footer">
+              <button class="btn btn-text focus" type="button">Annuler</button>
+              <button class="btn btn-primary" type="button">Rendre</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">Confirmation : le dialogue occupe la largeur moins 16 px de chaque côté.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -110,8 +110,68 @@ describe('MockApiInterceptor', () => {
   });
 
   it('laisse passer vers la vraie API un endpoint absent des jeux de données', () => {
-    void firstValueFrom(http.get('/api/v1/loans'));
+    void firstValueFrom(http.get('/api/v1/members'));
 
-    httpTesting.expectOne('/api/v1/loans').flush([]);
+    httpTesting.expectOne('/api/v1/members').flush([]);
+  });
+
+  /** RM-LOAN-27 : les endpoints d'emprunt sont servis par l'intercepteur simulé, derrière la session. */
+  describe('emprunts', () => {
+    const member = mockUsers[1];
+    const peste = '00000000-0000-4000-8000-000000001002';
+
+    it('refuse un emprunt sans session en 401 UNAUTHENTICATED', async () => {
+      const error = await failure(firstValueFrom(http.post('/api/v1/loans', { bookId: peste })));
+
+      expect(error.status).toBe(401);
+      expect((error.error as ProblemDetail).code).toBe('UNAUTHENTICATED');
+    });
+
+    it('crée un emprunt (201), le liste, puis le rend (204)', async () => {
+      await respond(login(member.email, member.password));
+
+      const created = await respond(
+        firstValueFrom(http.post<{ id: string; dueOn: string }>('/api/v1/loans', { bookId: peste })),
+      );
+      const listed = await respond(firstValueFrom(http.get<{ id: string }[]>('/api/v1/loans')));
+      await respond(firstValueFrom(http.post(`/api/v1/loans/${created.id}/return`, null)));
+      const after = await respond(firstValueFrom(http.get<unknown[]>('/api/v1/loans')));
+
+      expect(listed.map((loan) => loan.id)).toEqual([created.id]);
+      expect(after).toEqual([]);
+    });
+
+    it('renvoie 409 LOAN_ALREADY_RETURNED au second retour', async () => {
+      await respond(login(member.email, member.password));
+      const created = await respond(
+        firstValueFrom(http.post<{ id: string }>('/api/v1/loans', { bookId: peste })),
+      );
+      await respond(firstValueFrom(http.post(`/api/v1/loans/${created.id}/return`, null)));
+
+      const error = await failure(
+        firstValueFrom(http.post(`/api/v1/loans/${created.id}/return`, null)),
+      );
+
+      expect(error.status).toBe(409);
+      expect((error.error as ProblemDetail).code).toBe('LOAN_ALREADY_RETURNED');
+    });
+
+    it('partage l’état avec le catalogue : le livre emprunté en dernier exemplaire disparaît de la liste', async () => {
+      const python = '00000000-0000-4000-8000-000000001006';
+      await respond(login(member.email, member.password));
+      const ids = async (): Promise<string[]> =>
+        (
+          await respond(
+            firstValueFrom(
+              http.get<{ content: { id: string }[] }>('/api/v1/books', { params: { size: 50 } }),
+            ),
+          )
+        ).content.map((book) => book.id);
+      expect(await ids()).toContain(python);
+
+      await respond(firstValueFrom(http.post('/api/v1/loans', { bookId: python })));
+
+      expect(await ids()).not.toContain(python);
+    });
   });
 });
