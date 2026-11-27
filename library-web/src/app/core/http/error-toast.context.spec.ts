@@ -75,8 +75,26 @@ describe('skipErrorToast / errorInterceptor', () => {
     });
   });
 
-  it.each([500, 502, 503])('notifie toujours un %i, même ignoré', (status) => {
+  it.each([500, 502])('notifie toujours un %i, même ignoré', (status) => {
     post(status, [status, 400, 409]);
+
+    expect(messages.add).toHaveBeenCalledWith({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: 'Une erreur technique est survenue. Réessayez plus tard.',
+    });
+  });
+
+  /** RM-LOAN-27 : le 503 LOAN_BUSY est notifié par l'écran avec le message du contrat. */
+  it('ne notifie pas un 503 ignoré, et propage l’erreur', () => {
+    const received = post(503, [503, 404, 409], { title: 'Service momentanément occupé', status: 503 });
+
+    expect(messages.add).not.toHaveBeenCalled();
+    expect(received).toBe(503);
+  });
+
+  it('notifie un 503 absent de la liste ignorée', () => {
+    post(503, [404, 409]);
 
     expect(messages.add).toHaveBeenCalledWith({
       severity: 'error',

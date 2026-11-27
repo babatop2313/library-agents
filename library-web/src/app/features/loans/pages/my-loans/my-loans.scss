@@ -1,0 +1,36 @@
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--p-surface-900);
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.counter-zone {
+  margin: 0.5rem 0 1.5rem;
+}
+
+.counter-zone:has(+ p-message) {
+  margin-bottom: 1rem;
+}
+
+.counter {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+@media (min-width: 576px) {
+  .page-title {
+    font-size: 1.75rem;
+  }
+}

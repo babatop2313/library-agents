@@ -186,4 +186,11 @@ describe('BookSearch', () => {
 
     expect(emitted).toEqual([]);
   });
+
+  /** RM-LOAN-26 : après un emprunt qui retire la ligne, le focus revient au champ de recherche. */
+  it('focus() donne le focus au champ de recherche', () => {
+    fixture.componentInstance.focus();
+
+    expect(document.activeElement).toBe(input());
+  });
 });

@@ -14,10 +14,18 @@
       <th scope="col">Titre</th>
       <th scope="col" class="d-none d-md-table-cell">Auteur</th>
       <th scope="col" class="d-none d-md-table-cell">ISBN</th>
-      <th scope="col" class="col-availability text-end">
+      <th
+        scope="col"
+        class="col-availability text-end"
+        [class.d-none]="canBorrow()"
+        [class.d-md-table-cell]="canBorrow()"
+      >
         <span class="d-none d-md-inline">Exemplaires disponibles</span>
         <span class="d-md-none">Disponibles</span>
       </th>
+      @if (canBorrow()) {
+        <th scope="col" class="col-action"><span class="visually-hidden">Action</span></th>
+      }
     </tr>
   </ng-template>
   <ng-template #body let-book>
@@ -26,13 +34,35 @@
         <span class="fw-medium">{{ book.title }}</span>
         <span class="d-md-none cell-sub">{{ book.author }}</span>
         <span class="d-md-none cell-sub cell-number">ISBN {{ book.isbn }}</span>
+        @if (canBorrow()) {
+          <span class="d-md-none cell-sub">{{ availability(book) }}</span>
+        }
       </td>
       <td class="d-none d-md-table-cell">{{ book.author }}</td>
       <td class="d-none d-md-table-cell cell-number">{{ book.isbn }}</td>
-      <td class="text-end cell-number">
+      <td
+        class="text-end cell-number"
+        [class.d-none]="canBorrow()"
+        [class.d-md-table-cell]="canBorrow()"
+      >
         <span aria-hidden="true">{{ book.availableCopies }} / {{ book.totalCopies }}</span>
         <span class="visually-hidden">{{ availability(book) }}</span>
       </td>
+      @if (canBorrow()) {
+        <td class="text-end cell-action">
+          <p-button
+            label="Emprunter"
+            severity="secondary"
+            size="small"
+            [outlined]="true"
+            [attr.data-book-id]="book.id"
+            [ariaLabel]="borrowLabel(book)"
+            [loading]="borrowingId() === book.id"
+            [disabled]="borrowingId() !== null"
+            (onClick)="borrow.emit(book)"
+          />
+        </td>
+      }
     </tr>
   </ng-template>
   <ng-template #loadingbody>
@@ -42,13 +72,18 @@
         <td><p-skeleton width="70%" height="1rem" /></td>
         <td class="d-none d-md-table-cell"><p-skeleton width="60%" height="1rem" /></td>
         <td class="d-none d-md-table-cell"><p-skeleton width="80%" height="1rem" /></td>
-        <td><p-skeleton width="40%" height="1rem" styleClass="ms-auto" /></td>
+        <td [class.d-none]="canBorrow()" [class.d-md-table-cell]="canBorrow()">
+          <p-skeleton width="40%" height="1rem" styleClass="ms-auto" />
+        </td>
+        @if (canBorrow()) {
+          <td><p-skeleton width="4rem" height="2rem" styleClass="ms-auto" /></td>
+        }
       </tr>
     }
   </ng-template>
   <ng-template #emptymessage>
     <tr>
-      <td colspan="4" class="empty-state">
+      <td [attr.colspan]="colspan()" class="empty-state">
         @switch (status()) {
           @case ('error') {
             <span class="state-icon state-icon-error" aria-hidden="true">

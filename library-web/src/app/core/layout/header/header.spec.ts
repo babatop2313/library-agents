@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
 import { AuthService } from '../../auth/auth.service';
-import { CurrentUser } from '../../auth/current-user.model';
+import { CurrentUser, Role } from '../../auth/current-user.model';
 import { Header } from './header';
 
 const ALICE: CurrentUser = {
@@ -24,7 +24,12 @@ describe('Header', () => {
     logout.mockClear();
     TestBed.configureTestingModule({
       imports: [Header],
-      providers: [provideRouter([]), { provide: AuthService, useValue: { user, logout } }],
+      providers: [provideRouter([]), { provide: AuthService, useValue: {
+            user,
+            logout,
+            hasRole: (role: Role) => user()?.roles.includes(role) ?? false,
+          },
+        }],
     });
     router = TestBed.inject(Router);
   });

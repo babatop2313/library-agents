@@ -7,6 +7,7 @@ import { SKIP_ERROR_TOAST } from './error-toast.context';
 import { isProblemDetail } from './problem-detail';
 
 const TECHNICAL_ERROR = 'Une erreur technique est survenue. Réessayez plus tard.';
+const SERVICE_UNAVAILABLE = 503;
 const FORBIDDEN = "Vous n'avez pas les droits nécessaires";
 
 /**
@@ -14,7 +15,7 @@ const FORBIDDEN = "Vous n'avez pas les droits nécessaires";
  * affiché dans le formulaire de connexion) est laissé à `authInterceptor` / à la page : aucune notification ici.
  * Le 403 (`ACCESS_DENIED`) affiche un message fixe, sans lire le corps. Placé après `authInterceptor`.
  * L'erreur est toujours propagée : l'appelant peut reporter les erreurs par champ sur son formulaire.
- * Le contexte `SKIP_ERROR_TOAST` supprime la notification pour certains statuts (sauf 0, 403 et 5xx).
+ * Le contexte `SKIP_ERROR_TOAST` supprime la notification pour certains statuts (sauf 0, 403 et 5xx, hors 503).
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const messages = inject(MessageService);
@@ -29,9 +30,15 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   );
 };
 
-/** Seuls les statuts « métier » (400, 409…) peuvent être pris en charge par l'appelant ; jamais 0, 403 ni 5xx. */
+/**
+ * Seuls les statuts « métier » (400, 404, 409…) peuvent être pris en charge par l'appelant ; jamais 0, 403 ni 5xx,
+ * sauf le 503 (`LOAN_BUSY`, service momentanément occupé) que l'écran notifie lui-même avec le message du contrat.
+ */
 function isSkipped(req: HttpRequest<unknown>, error: HttpErrorResponse): boolean {
-  const technical = error.status === 0 || error.status === 403 || error.status >= 500;
+  const technical =
+    error.status === 0 ||
+    error.status === 403 ||
+    (error.status >= 500 && error.status !== SERVICE_UNAVAILABLE);
   return !technical && req.context.get(SKIP_ERROR_TOAST).has(error.status);
 }
 

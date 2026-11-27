@@ -10,5 +10,17 @@
     "email": "membre@exemple.test",
     "password": "mot-de-passe-fictif",
     "roles": ["MEMBER"]
+  },
+  {
+    "userId": "00000000-0000-4000-8000-000000000003",
+    "email": "membre-retard@exemple.test",
+    "password": "mot-de-passe-fictif",
+    "roles": ["MEMBER"]
+  },
+  {
+    "userId": "00000000-0000-4000-8000-000000000004",
+    "email": "membre-bibliothecaire@exemple.test",
+    "password": "mot-de-passe-fictif",
+    "roles": ["LIBRARIAN", "MEMBER"]
   }
 ]

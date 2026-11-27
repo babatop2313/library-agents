@@ -15,6 +15,7 @@ function statusText(status: number): string {
     403: 'Forbidden',
     404: 'Not Found',
     409: 'Conflict',
+    503: 'Service Unavailable',
   };
   return texts[status] ?? 'Error';
 }

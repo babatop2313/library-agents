@@ -28,9 +28,12 @@
     [size]="state().size"
     [query]="state().q"
     [canRegister]="canRegister()"
+    [canBorrow]="canBorrow()"
+    [borrowingId]="borrowingId()"
     (pageChange)="changePage($event)"
     (retry)="retry()"
     (clearSearch)="clearSearch()"
+    (borrow)="borrow($event)"
   />
 </section>
 

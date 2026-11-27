@@ -16,6 +16,7 @@ import validationFailed from '../../../mocks/auth/validation-failed.json';
 import { CurrentUser, Role } from '../auth/current-user.model';
 import { FieldError, ProblemDetail } from '../http/problem-detail';
 import { MockCatalogue } from './mock-catalogue';
+import { MockLoans } from './mock-loans';
 import { problem } from './mock-problem';
 
 /** Utilisateur fictif des jeux de données (mot de passe fictif, jamais un vrai secret). */
@@ -30,8 +31,9 @@ type MockResult = HttpResponse<unknown> | HttpErrorResponse;
 
 interface MockEndpoint {
   method: string;
-  path: string;
-  handle: (req: HttpRequest<unknown>) => MockResult;
+  /** Chemin exact, ou motif (`RegExp`) dont le premier groupe capturé est passé à `handle`. */
+  path: string | RegExp;
+  handle: (req: HttpRequest<unknown>, param: string) => MockResult;
 }
 
 const MIN_DELAY_MS = 200;
@@ -50,6 +52,7 @@ const EMAIL_MAX_LENGTH = 254;
 export class MockApiInterceptor implements HttpInterceptor {
   private readonly users = mockUsers as MockUser[];
   private readonly catalogue = new MockCatalogue();
+  private readonly loans = new MockLoans(this.catalogue);
   private session: CurrentUser | null = null;
 
   private readonly endpoints: MockEndpoint[] = [
@@ -66,11 +69,37 @@ export class MockApiInterceptor implements HttpInterceptor {
       path: '/api/v1/books',
       handle: (req) => this.withSession((user) => this.catalogue.register(req, user.roles)),
     },
+    {
+      method: 'POST',
+      path: '/api/v1/loans',
+      handle: (req) => this.withSession((user) => this.loans.borrow(req, user)),
+    },
+    {
+      method: 'GET',
+      path: '/api/v1/loans',
+      handle: () => this.withSession((user) => this.loans.list(user)),
+    },
+    {
+      method: 'POST',
+      path: /^\/api\/v1\/loans\/([^/]+)\/return$/,
+      handle: (_req, id) => this.withSession((user) => this.loans.giveBack(id, user)),
+    },
   ];
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const path = req.url.split('?')[0];
-    const endpoint = this.endpoints.find((e) => e.method === req.method && e.path === path);
+    let param = '';
+    const endpoint = this.endpoints.find((e) => {
+      if (e.method !== req.method) {
+        return false;
+      }
+      if (typeof e.path === 'string') {
+        return e.path === path;
+      }
+      const match = e.path.exec(path);
+      param = match ? decodeURIComponent(match[1]) : '';
+      return match !== null;
+    });
     if (!endpoint) {
       return next.handle(req);
     }
@@ -78,7 +107,7 @@ export class MockApiInterceptor implements HttpInterceptor {
     // L'état (session) change à l'émission, après le délai, comme une vraie réponse serveur.
     return timer(latency).pipe(
       mergeMap(() => {
-        const result = endpoint.handle(req);
+        const result = endpoint.handle(req, param);
         return result instanceof HttpErrorResponse ? throwError(() => result) : of(result);
       }),
     );

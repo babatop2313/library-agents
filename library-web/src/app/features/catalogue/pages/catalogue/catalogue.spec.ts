@@ -119,11 +119,22 @@ describe('Catalogue (page)', () => {
       expect(rows(element)[0].textContent).toContain('Livre 00');
     });
 
-    it('affiche le titre « Catalogue », les colonnes et le paginateur à 3 pages pour 25 livres', async () => {
+    it('affiche le titre « Catalogue », 4 colonnes (LIBRARIAN) et le paginateur à 3 pages pour 25 livres', async () => {
+      roles = ['LIBRARIAN'];
+
       const element = await open();
 
       expect(element.querySelector('h1')?.textContent).toContain('Catalogue');
       expect(element.querySelectorAll('th')).toHaveLength(4);
+      expect(element.querySelectorAll('.p-paginator-page')).toHaveLength(3);
+    });
+
+    it('affiche 5 colonnes (dont l’action) pour un MEMBER, RM-LOAN-21', async () => {
+      roles = ['MEMBER'];
+
+      const element = await open();
+
+      expect(element.querySelectorAll('th')).toHaveLength(5);
       expect(element.querySelectorAll('.p-paginator-page')).toHaveLength(3);
     });
 

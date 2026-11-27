@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../auth/auth.service';
-import { CurrentUser } from '../../auth/current-user.model';
+import { CurrentUser, Role } from '../../auth/current-user.model';
 import { Header } from './header';
 
 const MEMBER: CurrentUser = {
@@ -27,7 +27,11 @@ describe('Header : lien Catalogue', () => {
           { path: 'catalogue', component: Header },
           { path: '', component: Header },
         ]),
-        { provide: AuthService, useValue: { user, logout: () => of(undefined) } },
+        { provide: AuthService, useValue: {
+            user,
+            logout: () => of(undefined),
+            hasRole: (role: Role) => user()?.roles.includes(role) ?? false,
+          } },
       ],
     });
   });

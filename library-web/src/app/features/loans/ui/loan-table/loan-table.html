@@ -1,0 +1,151 @@
+<p-table
+  [value]="rows()"
+  [lazy]="true"
+  [loading]="status() === 'reloading'"
+  [attr.aria-busy]="status() === 'skeleton' || status() === 'reloading'"
+>
+  <ng-template #colgroup>
+    <caption class="visually-hidden">
+      Mes emprunts en cours
+    </caption>
+  </ng-template>
+  <ng-template #header>
+    <tr>
+      <th scope="col">Titre</th>
+      <th scope="col" class="d-none d-lg-table-cell">Auteur</th>
+      <th scope="col" class="d-none d-lg-table-cell">ISBN</th>
+      <th scope="col" class="d-none d-lg-table-cell col-date">Emprunté le</th>
+      <th scope="col" class="d-none d-md-table-cell col-due">À rendre au plus tard le</th>
+      <th scope="col" class="d-none d-md-table-cell col-status">Statut</th>
+      <th scope="col" class="col-action"><span class="visually-hidden">Action</span></th>
+    </tr>
+  </ng-template>
+  <ng-template #body let-loan>
+    <tr>
+      <td class="cell-title">
+        @if (loan.title === null) {
+          <span class="fw-medium unavailable">Livre indisponible</span>
+        } @else {
+          <span class="fw-medium">{{ loan.title }}</span>
+        }
+        <span class="d-md-none cell-tag">
+          @if (loan.overdue) {
+            <p-tag severity="danger" value="En retard" icon="pi pi-exclamation-circle" />
+          } @else {
+            <p-tag severity="info" value="En cours" />
+          }
+        </span>
+        @if (loan.title === null) {
+          <span class="d-lg-none cell-sub">Ce livre n'est plus au catalogue.</span>
+        } @else {
+          @if (loan.author !== null) {
+            <span class="d-lg-none cell-sub">{{ loan.author }}</span>
+          }
+          @if (loan.isbn !== null) {
+            <span class="d-lg-none cell-sub cell-number">ISBN {{ loan.isbn }}</span>
+          }
+        }
+        <span class="d-lg-none cell-sub cell-number"
+          >Emprunté le {{ formatDate(loan.borrowedOn) }}</span
+        >
+        <span class="d-md-none cell-sub cell-number" [class.overdue]="loan.overdue">
+          À rendre au plus tard le {{ formatDate(loan.dueOn) }}
+        </span>
+      </td>
+      <td class="d-none d-lg-table-cell">
+        @if (loan.author === null) {
+          <span aria-hidden="true">&mdash;</span>
+          <span class="visually-hidden">Non renseigné</span>
+        } @else {
+          {{ loan.author }}
+        }
+      </td>
+      <td class="d-none d-lg-table-cell cell-number nowrap">
+        @if (loan.isbn === null) {
+          <span aria-hidden="true">&mdash;</span>
+          <span class="visually-hidden">Non renseigné</span>
+        } @else {
+          {{ loan.isbn }}
+        }
+      </td>
+      <td class="d-none d-lg-table-cell cell-number">{{ formatDate(loan.borrowedOn) }}</td>
+      <td class="d-none d-md-table-cell cell-number" [class.overdue]="loan.overdue">
+        {{ formatDate(loan.dueOn) }}
+      </td>
+      <td class="d-none d-md-table-cell">
+        @if (loan.overdue) {
+          <p-tag severity="danger" value="En retard" icon="pi pi-exclamation-circle" />
+        } @else {
+          <p-tag severity="info" value="En cours" />
+        }
+      </td>
+      <td class="text-end cell-action">
+        <p-button
+          label="Rendre"
+          severity="secondary"
+          size="small"
+          [outlined]="true"
+          [attr.data-loan-id]="loan.id"
+          [ariaLabel]="ariaLabel(loan)"
+          [loading]="returningId() === loan.id"
+          [disabled]="returningId() !== null"
+          (onClick)="giveBack.emit(loan)"
+        />
+      </td>
+    </tr>
+  </ng-template>
+  <ng-template #loadingbody>
+    <!-- PrimeNG ajoute aussi ce gabarit pendant un rechargement ([loading]) : lignes squelettes seulement au premier chargement. -->
+    @if (status() === 'skeleton') {
+      <tr>
+        <td><p-skeleton width="70%" height="1rem" /></td>
+        <td class="d-none d-lg-table-cell"><p-skeleton width="60%" height="1rem" /></td>
+        <td class="d-none d-lg-table-cell"><p-skeleton width="80%" height="1rem" /></td>
+        <td class="d-none d-lg-table-cell"><p-skeleton width="70%" height="1rem" /></td>
+        <td class="d-none d-md-table-cell"><p-skeleton width="70%" height="1rem" /></td>
+        <td class="d-none d-md-table-cell"><p-skeleton width="60%" height="1.25rem" /></td>
+        <td><p-skeleton width="4rem" height="2rem" styleClass="ms-auto" /></td>
+      </tr>
+    }
+  </ng-template>
+  <ng-template #emptymessage>
+    <tr>
+      <td [attr.colspan]="colspan()" class="empty-state">
+        @switch (status()) {
+          @case ('error') {
+            <span class="state-icon state-icon-error" aria-hidden="true">
+              <i class="pi pi-exclamation-triangle"></i>
+            </span>
+            <h2 class="state-title">Vos emprunts n'ont pas pu être chargés</h2>
+            <p class="state-text">Vérifiez votre connexion, puis réessayez.</p>
+            <p-button
+              label="Réessayer"
+              icon="pi pi-refresh"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="retrying()"
+              (onClick)="retry.emit()"
+            />
+          }
+          @case ('forbidden') {
+            <span class="state-icon state-icon-error" aria-hidden="true">
+              <i class="pi pi-exclamation-triangle"></i>
+            </span>
+            <h2 class="state-title">
+              Vous n'avez pas les droits nécessaires pour consulter vos emprunts
+            </h2>
+          }
+          @default {
+            <span class="state-icon" aria-hidden="true"><i class="pi pi-book"></i></span>
+            <h2 class="state-title">Vous n'avez aucun emprunt en cours</h2>
+            <p class="state-text">
+              Choisissez un livre dans le catalogue : vous pouvez en emprunter jusqu'à 3 à la fois,
+              pour 14 jours.
+            </p>
+            <p-button label="Parcourir le catalogue" icon="pi pi-book" routerLink="/catalogue" />
+          }
+        }
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

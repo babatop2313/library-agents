@@ -1,0 +1,41 @@
+<section class="container-xl px-3 px-md-4 py-4">
+  <h1 #title class="page-title" tabindex="-1">Mes emprunts</h1>
+
+  <div class="counter-zone" aria-live="polite">
+    @if (isLoadingFirst()) {
+      <p class="counter">Chargement de vos emprunts…</p>
+    } @else if (!failed()) {
+      <p class="counter">
+        <span aria-hidden="true">{{ count() }} / {{ max }} emprunts en cours</span>
+        <span class="visually-hidden">{{ spokenCount() }}</span>
+      </p>
+      @if (limitReached()) {
+        <p class="counter">Limite atteinte : rendez un livre pour en emprunter un autre.</p>
+      }
+    }
+  </div>
+
+  @if (hasOverdue() && !failed()) {
+    <p-message
+      class="d-block mb-3"
+      severity="warn"
+      icon="pi pi-exclamation-triangle"
+      [closable]="false"
+      [attr.role]="null"
+      [attr.aria-live]="null"
+    >
+      Vous ne pouvez plus emprunter tant que vous avez un livre en retard
+    </p-message>
+  }
+
+  <app-loan-table
+    [loans]="loans()"
+    [status]="tableStatus()"
+    [returningId]="returningId()"
+    [retrying]="retrying()"
+    (giveBack)="askGiveBack($event)"
+    (retry)="retry()"
+  />
+</section>
+
+<p-confirmdialog [draggable]="false" [closable]="true" [closeOnEscape]="true" />

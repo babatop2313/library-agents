@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Livre déjà emprunté",
+  "status": 409,
+  "detail": "Vous avez déjà un emprunt en cours pour ce livre",
+  "instance": "/api/v1/loans",
+  "code": "BOOK_ALREADY_BORROWED"
+}

@@ -62,6 +62,11 @@ export class BookSearch {
     this.emit();
   }
 
+  /** Donne le focus au champ de recherche. */
+  focus(): void {
+    this.field().nativeElement.focus();
+  }
+
   /** Vide le champ, relance sans filtre et rend le focus au champ. */
   clear(): void {
     this.text.set('');

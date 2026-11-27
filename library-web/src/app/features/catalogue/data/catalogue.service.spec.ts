@@ -157,4 +157,51 @@ describe('CatalogueService', () => {
       expect(error?.error.code).toBe('VALIDATION_FAILED');
     });
   });
+
+  /** RM-LOAN-21, RM-LOAN-22 : emprunt depuis le catalogue (contrat docs/api/loan.md). */
+  describe('borrow', () => {
+    const CREATED = {
+      id: '6d1f0c4b-8a2e-4f7a-b3d9-2c5e7a9b1f30',
+      bookId: BOOK.id,
+      borrowedOn: '2026-11-24',
+      dueOn: '2026-12-08',
+    };
+
+    it('envoie POST /api/v1/loans avec le seul bookId', () => {
+      service.borrow(BOOK.id).subscribe();
+
+      const req = httpTesting.expectOne('/api/v1/loans');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ bookId: BOOK.id });
+      req.flush(CREATED, { status: 201, statusText: 'Created' });
+    });
+
+    it('désactive le toast générique pour 404, 409 et 503 seulement', () => {
+      service.borrow(BOOK.id).subscribe();
+
+      const req = httpTesting.expectOne('/api/v1/loans');
+      expect(req.request.context.get(SKIP_ERROR_TOAST)).toEqual(new Set([404, 409, 503]));
+      req.flush(CREATED, { status: 201, statusText: 'Created' });
+    });
+
+    it('renvoie l’emprunt créé', () => {
+      let created: unknown;
+
+      service.borrow(BOOK.id).subscribe((loan) => (created = loan));
+      httpTesting.expectOne('/api/v1/loans').flush(CREATED, { status: 201, statusText: 'Created' });
+
+      expect(created).toEqual(CREATED);
+    });
+
+    it.each([404, 409, 503])('propage une erreur %i à l’appelant', (status) => {
+      let received: number | undefined;
+      service.borrow(BOOK.id).subscribe({ error: (e: { status: number }) => (received = e.status) });
+
+      httpTesting
+        .expectOne('/api/v1/loans')
+        .flush({ code: 'X' }, { status, statusText: 'Error' });
+
+      expect(received).toBe(status);
+    });
+  });
 });

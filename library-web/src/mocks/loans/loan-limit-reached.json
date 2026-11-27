@@ -1,0 +1,8 @@
+{
+  "type": "about:blank",
+  "title": "Limite d'emprunts atteinte",
+  "status": 409,
+  "detail": "Vous avez déjà 3 emprunts en cours",
+  "instance": "/api/v1/loans",
+  "code": "LOAN_LIMIT_REACHED"
+}
